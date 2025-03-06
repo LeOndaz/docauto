@@ -71,7 +71,7 @@ class DocumentationService:
                     self.logger.info(f'[PLAN][UPDATE] {file_path}:')
                 else:
                     self.fs_service.write_file(file_path, modified_source)
-                    self.logger.info(f'Updated {file_path}')
+                    self.logger.info(f'[UPDATE] {file_path}')
                 return True
             else:
                 self.logger.info(f'No changes needed for {file_path}')

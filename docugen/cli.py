@@ -241,7 +241,8 @@ class DocuGenCLI(BaseCLI):
 
 
 def main() -> int:
-    return DocuGenCLI().run()
+    file_system = FileSystemService()
+    return DocuGenCLI(file_system).run()
 
 
 if __name__ == '__main__':

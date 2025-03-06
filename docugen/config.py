@@ -1,5 +1,6 @@
 from types import MappingProxyType
 from typing import List, Optional, TypedDict
+from pydantic import BaseModel, Field
 
 
 class Config(TypedDict):
@@ -10,6 +11,21 @@ class Config(TypedDict):
     api_key: Optional[str]
     max_context: int
     constraints: List[str]
+
+
+class LLMDocstringSingleResponse(BaseModel):
+    """Structured output model for a single LLM-generated docstring"""
+    
+    content: str = Field(description="The generated docstring content")
+    format: str = Field(default="sphinx", description="The format of the docstring (e.g. sphinx, google)")
+    metadata: dict = Field(default_factory=dict, description="Additional metadata about the generation")
+
+
+class LLMDocstringResponse(BaseModel):
+    """Container model for multiple LLM-generated docstrings"""
+    
+    responses: List[LLMDocstringSingleResponse] = Field(description="List of generated docstring responses")
+    metadata: dict = Field(default_factory=dict, description="Additional metadata about the overall generation")
 
 
 def create_config(

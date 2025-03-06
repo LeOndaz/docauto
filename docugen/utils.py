@@ -85,7 +85,7 @@ def extract_docstring_content(response: str) -> str:
     return match.group('doc')
 
 
-def is_valid_string_iterable(obj) -> bool:
+def is_valid_string_iterable(obj: Iterable) -> bool:
     """Validate if an input is a valid iterable of strings.
 
     Args:
