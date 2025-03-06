@@ -1,0 +1,25 @@
+[project]
+name = "docugen"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "libcst>=1.6.0",
+    "openai>=1.64.0",
+    "tiktoken>=0.9.0",
+    "typing-extensions>=4.0.0; python_version < '3.11'"
+]
+
+[dependency-groups]
+dev = [
+    "isort>=6.0.1",
+    "pytest>=8.3.4",
+    "ruff>=0.9.7",
+    "setuptools>=75.8.2",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
