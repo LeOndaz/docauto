@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Callable, Optional, TypedDict, Union
 from openai import OpenAI
-
+from pydantic import BaseModel
 from docugen.config import Config, LLMDocstringResponse
 from docugen.utils import (
     extract_docstring_content,
@@ -25,6 +25,8 @@ LLMResponseSanitizer = Union[LLMResponseSanitizerDict, Callable]
 
 class BaseDocsGenerator(ABC):
     """Base documentation generator."""
+
+    response_model: BaseModel = None
 
     # llm_response_sanitizers: List[LLMResponseSanitizer] = [
     #     str.strip,
@@ -64,6 +66,12 @@ class BaseDocsGenerator(ABC):
             )
         if logger is not None and not isinstance(logger, logging.Logger):
             raise TypeError('logger must be a Logger instance or None')
+
+        if self.response_model and (
+            not issubclass(self.response_model, BaseModel)
+            or not hasattr(self.response_model, 'model_validate_json')
+        ):
+            raise TypeError('response_model must be a pydantic BaseModel subclass')
 
         self.config: Config = {
             'base_url': base_url,
@@ -133,6 +141,9 @@ class DocuGen(BaseDocsGenerator):
             ValueError: If no API key is provided
         """
 
+        if self.response_model is None:
+            self.response_model = LLMDocstringResponse
+
         super().__init__(
             base_url=base_url,
             ai_model=ai_model,
@@ -172,12 +183,9 @@ class DocuGen(BaseDocsGenerator):
             response_content = self._generate_documentation(prompt)
 
             try:
-                docstring_response = LLMDocstringResponse.model_validate_json(
+                return self.response_model.model_validate_json(
                     response_content
                 )
-                if docstring_response.responses:
-                    return docstring_response.responses[0].content
-                return response_content
             except Exception as e:
                 self.logger.warning(f'Failed to parse LLM response as JSON: {e}')
                 return response_content
@@ -235,5 +243,5 @@ class DocuGen(BaseDocsGenerator):
             )
             return response.choices[0].message.content
         except Exception as e:
-            self.logger.error('LLM API call failed: %s', str(e))
+            self.logger.error(f'[{type(e)}] LLM API call failed: %s', str(e))
             raise

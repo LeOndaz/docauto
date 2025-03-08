@@ -1,6 +1,5 @@
 import pytest
 from pathlib import Path
-from docugen.config import Config
 from docugen.cli import DocuGenCLI
 
 

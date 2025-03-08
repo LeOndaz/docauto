@@ -9,7 +9,7 @@ except ImportError:
     from typing_extensions import Literal
 
 
-TrackedObjectState = Literal['pending', 'processed']
+TrackedObjectState = Literal['pending', 'processed', 'failed']
 
 
 class BaseProgressTracker:

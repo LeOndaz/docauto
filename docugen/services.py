@@ -7,26 +7,31 @@ import libcst as cst
 from docugen.exceptions import InvalidPythonModule
 from docugen.fs import FileSystemService
 from docugen.generator import BaseDocsGenerator
+from docugen.parsers import LLMDocstringResponseParser, LLMResponseParser
 from docugen.tracker import BaseProgressTracker, ProgressTracker
 from docugen.transformers import DocTransformer
 
 
 class DocumentationService:
     """Service for processing files and generating documentation"""
+    transformer_class: DocTransformer = None
 
     def __init__(
         self,
         generator: BaseDocsGenerator,
         fs_service: Optional[FileSystemService] = None,
+        parser: Optional[LLMResponseParser] = None,
         logger: Optional[logging.Logger] = None,
         progress_tracker: Optional[BaseProgressTracker] = None,
     ):
         self.generator = generator
+        self.parser = parser or LLMDocstringResponseParser()
         self.logger = logger or logging.getLogger('docugen')
         self.fs_service = fs_service or FileSystemService(self.logger)
         self.progress_tracker = progress_tracker or ProgressTracker(self.logger)
-        self.transformer = DocTransformer(
+        self.transformer = self.transformer_class(
             generator,
+            parser,
             self.logger,
             overwrite=True,
             progress_tracker=self.progress_tracker,
@@ -61,9 +66,6 @@ class DocumentationService:
 
             transformed_module = module.visit(self.transformer)
             modified_source = transformed_module.code
-
-            # re-validate after modification as a safety-measurement
-            self.parse_python(modified_source)
 
             # Check if changes were made
             if source != modified_source:
