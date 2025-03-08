@@ -28,20 +28,6 @@ class BaseDocsGenerator(ABC):
 
     response_model: BaseModel = None
 
-    # llm_response_sanitizers: List[LLMResponseSanitizer] = [
-    #     str.strip,
-    #     {
-    #         'sanitizer': remove_markdown_fences,
-    #         'fail_silent': True,
-    #     },
-    #     {
-    #         'sanitizer': remove_function_definition,
-    #         'fail_silent': True,
-    #     },
-    #     extract_docstring_content,
-    #     str.strip,
-    # ]
-
     @abstractmethod
     def __init__(
         self,
@@ -90,30 +76,6 @@ class BaseDocsGenerator(ABC):
     @abstractmethod
     def generate(self, source, additional_context=None):
         pass
-
-    # def get_response_sanitizers(self):
-    #     return self.llm_response_sanitizers
-
-    # def call_sanitizer(self, sanitizer: LLMResponseSanitizer, llm_response):
-    #     if callable(sanitizer):
-    #         return sanitizer(llm_response)
-
-    #     elif isinstance(sanitizer, dict):
-    #         if 'sanitizer' not in sanitizer:
-    #             raise ValueError("Missing 'sanitizer' key in sanitizer dictionary")
-
-    #         fail_silent = False
-
-    #         if 'fail_silent' in sanitizer:
-    #             assert type(sanitizer['fail_silent']) is bool
-    #             fail_silent = sanitizer['fail_silent']
-
-    #         try:
-    #             return sanitizer['sanitizer'](llm_response)
-    #         except Exception as e:
-    #             if fail_silent:
-    #                 return llm_response
-    #             raise ValueError(f'Sanitizer failed: {e}') from e
 
 
 class DocuGen(BaseDocsGenerator):
@@ -183,9 +145,7 @@ class DocuGen(BaseDocsGenerator):
             response_content = self._generate_documentation(prompt)
 
             try:
-                return self.response_model.model_validate_json(
-                    response_content
-                )
+                return self.response_model.model_validate_json(response_content)
             except Exception as e:
                 self.logger.warning(f'Failed to parse LLM response as JSON: {e}')
                 return response_content

@@ -34,5 +34,5 @@ class LLMDocstringResponseParser(LLMResponseParser[LLMDocstringResponse]):
         if content:
             return content
 
-        self.logger.warning("No content found in response.")
+        self.logger.warning('No content found in response.')
         return ''

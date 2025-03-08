@@ -15,17 +15,27 @@ class Config(TypedDict):
 
 class LLMDocstringSingleResponse(BaseModel):
     """Structured output model for a single LLM-generated docstring"""
-    
-    content: str = Field(description="The generated docstring content")
-    format: str = Field(default="sphinx", description="The format of the docstring (e.g. sphinx, google)")
-    metadata: dict = Field(default_factory=dict, description="Additional metadata about the generation")
+
+    content: str = Field(description='The generated docstring content')
+    format: str = Field(
+        default='sphinx',
+        description='The format of the docstring (e.g. sphinx, google)',
+    )
+    metadata: dict = Field(
+        default_factory=dict, description='Additional metadata about the generation'
+    )
 
 
 class LLMDocstringResponse(BaseModel):
     """Container model for multiple LLM-generated docstrings"""
-    
-    responses: List[LLMDocstringSingleResponse] = Field(description="List of generated docstring responses")
-    metadata: dict = Field(default_factory=dict, description="Additional metadata about the overall generation")
+
+    responses: List[LLMDocstringSingleResponse] = Field(
+        description='List of generated docstring responses'
+    )
+    metadata: dict = Field(
+        default_factory=dict,
+        description='Additional metadata about the overall generation',
+    )
 
 
 def create_config(
@@ -59,13 +69,15 @@ def create_config(
             'Your respond will be taken as a docstring. Respond only with docstrings.',
         ]
 
-    return MappingProxyType({
-        'base_url': base_url,
-        'ai_model': ai_model,
-        'api_key': api_key,
-        'max_context': max_context,
-        'constraints': constraints,
-    })
+    return MappingProxyType(
+        {
+            'base_url': base_url,
+            'ai_model': ai_model,
+            'api_key': api_key,
+            'max_context': max_context,
+            'constraints': constraints,
+        }
+    )
 
 
 OLLAMA_PRESET = create_config(

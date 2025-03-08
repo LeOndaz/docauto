@@ -13,7 +13,15 @@ def mock_malformed_response():
         model='gpt-3.5-turbo',
         object='chat.completion',
         created=1234567890,
-        choices=[Choice(finish_reason='stop', index=0, message=ChatCompletionMessage(content='Invalid response', role='assistant'))],
+        choices=[
+            Choice(
+                finish_reason='stop',
+                index=0,
+                message=ChatCompletionMessage(
+                    content='Invalid response', role='assistant'
+                ),
+            )
+        ],
     )
 
 
@@ -68,10 +76,10 @@ def test_malformed_llm_response(mock_malformed_response):
     with patch('openai.OpenAI') as mock_client:
         instance = mock_client.return_value
         instance.chat.completions.create.return_value = mock_malformed_response
-        
+
         generator = DocuGen(base_url='http://localhost:11434')
         result = generator.generate('def test(): pass')
-        
+
         # The sanitizer chain should handle malformed responses gracefully
         assert isinstance(result, str)
         assert len(result) > 0
@@ -104,16 +112,16 @@ def test_sanitizer_fail_loud():
 def test_sanitizer_chain_error_propagation():
     """Test error propagation through the sanitizer chain"""
     generator = DocuGen(base_url='http://localhost:11434')
-    
+
     # Create a sanitizer that always fails
     failing_sanitizer = {
         'sanitizer': lambda x: x.undefined_attribute,  # This will raise AttributeError
-        'fail_silent': False
+        'fail_silent': False,
     }
-    
+
     # Add the failing sanitizer to the chain
     original_sanitizers = generator.get_response_sanitizers()
     generator.llm_response_sanitizers = [failing_sanitizer] + original_sanitizers
-    
+
     with pytest.raises(ValueError, match='Sanitizer failed'):
         generator.generate('def test(): pass')

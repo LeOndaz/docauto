@@ -13,7 +13,6 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 
 
-
 @pytest.fixture
 def mock_openai_response():
     return ChatCompletion(
@@ -104,16 +103,18 @@ def files_for_testing():
 
 @pytest.fixture
 def config():
-    return Config(**{
-        'base_url': 'http://localhost:11434/v1',
-        'ai_model': 'phi4',
-        'api_key': 'ollama',
-        'max_context': 16384,
-        'constraints': [
-            'Your respond will be taken as a docstring. Respond only with docstrings.',
-            'Keep it short, precise and use sphinx format.',
-        ],
-    })
+    return Config(
+        **{
+            'base_url': 'http://localhost:11434/v1',
+            'ai_model': 'phi4',
+            'api_key': 'ollama',
+            'max_context': 16384,
+            'constraints': [
+                'Your respond will be taken as a docstring. Respond only with docstrings.',
+                'Keep it short, precise and use sphinx format.',
+            ],
+        }
+    )
 
 
 @pytest.fixture

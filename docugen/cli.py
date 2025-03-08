@@ -141,14 +141,14 @@ class DocuGenCLI(BaseCLI):
         # Replace with preset values if available
         if preset:
             config = preset
-        
+
         # Override preset values with CLI arguments if provided
         config_args = {
             'base_url': args.get('base_url') or config.get('base_url'),
             'ai_model': args.get('ai_model') or config.get('ai_model'),
             'api_key': args.get('api_key') or config.get('api_key'),
             'max_context': args.get('max_context') or config.get('max_context'),
-            'constraints': args.get('constraints') or config.get('constraints')
+            'constraints': args.get('constraints') or config.get('constraints'),
         }
 
         config = create_config(**config_args)

@@ -14,6 +14,7 @@ from docugen.transformers import DocTransformer
 
 class DocumentationService:
     """Service for processing files and generating documentation"""
+
     transformer_class: DocTransformer = None
 
     def __init__(

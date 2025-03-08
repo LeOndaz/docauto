@@ -108,6 +108,7 @@ def test_sanitizer_chain_with_complex_input(generator):
 
 def test_custom_sanitizer_addition(generator):
     """Test adding a custom sanitizer to the chain"""
+
     def custom_sanitizer(x):
         return x.upper()
 

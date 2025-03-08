@@ -24,7 +24,6 @@ def test_docugen_local_initialization():
     assert generator.client.api_key == 'ollama'
 
 
-
 def test_system_prompt_generation():
     """Test system prompt generation with various constraints"""
     generator = DocuGen(

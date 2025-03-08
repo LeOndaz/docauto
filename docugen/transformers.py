@@ -30,7 +30,11 @@ class DocTransformer(cst.CSTTransformer):
     def visit_FunctionDef(self, node: cst.FunctionDef) -> None:
         self.progress_tracker.track_object('current_file', node, 'pending')
 
-    def _process_node(self, original_node: Union[cst.FunctionDef, cst.ClassDef], updated_node: Union[cst.FunctionDef, cst.ClassDef]) -> Union[cst.FunctionDef, cst.ClassDef]:
+    def _process_node(
+        self,
+        original_node: Union[cst.FunctionDef, cst.ClassDef],
+        updated_node: Union[cst.FunctionDef, cst.ClassDef],
+    ) -> Union[cst.FunctionDef, cst.ClassDef]:
         """Process a node (function/class) to add or update its docstring.
 
         Args:
@@ -46,7 +50,9 @@ class DocTransformer(cst.CSTTransformer):
                 docstring = self.parser(llm_response)
                 updated_node = self.insert_docstring(updated_node, docstring)
             except Exception as e:
-                self.logger.error('%s documentation failed: %s', type(updated_node).__name__, str(e))
+                self.logger.error(
+                    '%s documentation failed: %s', type(updated_node).__name__, str(e)
+                )
                 self.progress_tracker.track_object(
                     'current_file', updated_node, 'failed'
                 )
