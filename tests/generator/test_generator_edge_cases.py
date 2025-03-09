@@ -1,8 +1,10 @@
+from openai import OpenAIError
 import pytest
 from unittest.mock import patch
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 
+from docugen.exceptions import GenerationError
 from docugen.generator import DocuGen
 
 
@@ -18,8 +20,8 @@ def mock_malformed_response():
                 finish_reason='stop',
                 index=0,
                 message=ChatCompletionMessage(
-                    content='{"responses": [{"content": "Invalid JSON"}]}',
-                    role='assistant'
+                    content='{"responses": [{"content": "Test docstring", "format": "sphinx", "should_indent": true, "should_indent_first_line": false, "should_add_newline_at_the_end": false}], "invalid_field": "This should cause parsing error"}',
+                    role='assistant',
                 ),
             )
         ],
@@ -35,15 +37,20 @@ def test_empty_source(generator):
 def test_max_context_limit():
     """Test handling of source code exceeding max context"""
     generator = DocuGen(base_url='http://localhost:11434', max_context=10)
-    with pytest.raises(ValueError, match='prompt is too long'):
+    generator.min_response_context = 0
+
+    with pytest.raises(ValueError, match='Prompt exceeds max_context limit.'):
         generator.generate('def very_long_function(): pass')
 
 
 def test_failed_llm_response(mock_openai_client, generator):
     """Test handling of failed LLM API calls"""
-    mock_openai_client.chat.completions.create.side_effect = Exception('API Error')
 
-    with pytest.raises(RuntimeError, match='Failed to generate documentation'):
+    mock_openai_client.beta.chat.completions.parse.side_effect = OpenAIError(
+        'API Error'
+    )
+
+    with pytest.raises(GenerationError, match='Failed to generate documentation'):
         generator.generate('def test(): pass')
 
 
@@ -61,15 +68,11 @@ def test_invalid_constraints():
         )
 
 
-def test_malformed_llm_response(mock_malformed_response):
+def test_malformed_llm_response(mock_openai_client, generator):
     """Test handling of malformed LLM responses"""
-    with patch('openai.OpenAI') as mock_client:
-        instance = mock_client.return_value
-        instance.chat.completions.create.return_value = mock_malformed_response
+    mock_openai_client.beta.chat.completions.parse.side_effect = OpenAIError(
+        'Malformed response'
+    )
 
-        generator = DocuGen(base_url='http://localhost:11434')
-        result = generator.generate('def test(): pass')
-
-        # The sanitizer chain should handle malformed responses gracefully
-        assert isinstance(result, str)
-        assert len(result) > 0
+    with pytest.raises(GenerationError, match='Failed to generate documentation'):
+        generator.generate('def test(): pass')

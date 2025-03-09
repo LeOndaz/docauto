@@ -1,11 +1,3 @@
-"""
-This file should only have functions for testing.
-
-classes.py holds classes
-funcs_and_classes.py holds a mix of them.
-"""
-
-
 def simple_printer():
     for i in range(1, 6):
         print('*' * i)

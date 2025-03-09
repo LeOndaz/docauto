@@ -61,7 +61,7 @@ def test_response_multiple_parsing():
     """Test parsing of LLM response into structured format"""
     response_1 = LLMDocstringSingleResponse(content='Test docstring')
     llm_response = LLMDocstringResponse(responses=[response_1])
-    assert isinstance(LLMDocstringSingleResponse.content, str)
+    assert isinstance(response_1.content, str)
     assert isinstance(llm_response.responses, list)
     assert isinstance(llm_response.responses[0], LLMDocstringSingleResponse)
     assert isinstance(llm_response.responses[0].content, str)

@@ -1,4 +1,11 @@
 import logging
+
+try:
+    from typing import Generator
+except ImportError:
+    from typing_extensions import Generator
+
+import openai
 from docugen.logger import SmartFormatter
 from pathlib import Path
 
@@ -36,10 +43,10 @@ def mock_openai_response():
 
 
 @pytest.fixture
-def mock_openai_client(mock_openai_response):
+def mock_openai_client(mock_openai_response) -> Generator[openai.OpenAI, None, None]:
     with patch('openai.OpenAI') as mock_client:
         instance = mock_client.return_value
-        instance.chat.completions.create.return_value = mock_openai_response
+        instance.beta.chat.completions.parse.return_value = mock_openai_response
         yield instance
 
 

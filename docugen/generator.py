@@ -1,15 +1,14 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import Callable, Optional, TypedDict, Union
-from openai import OpenAI
 from docugen.config import APIConfig
 from docugen.models import LLMDocstringResponse
 from docugen.exceptions import GenerationError
 from docugen.utils import (
-    is_text_within_context,
     is_valid_string_iterable,
 )
 import tiktoken
+import openai
 
 
 class LLMResponseSanitizerDict(TypedDict):
@@ -55,7 +54,7 @@ class BaseDocsGenerator(ABC):
             'ai_model': ai_model,
             'api_key': api_key,
             'max_context': max_context,
-            'constraints': constraints,
+            'constraints': constraints or [],
         }
         self.is_local = 'localhost' in self.config['base_url']
 
@@ -63,7 +62,7 @@ class BaseDocsGenerator(ABC):
             raise ValueError('API key is required for documentation generation')
 
         self.logger = logger
-
+        self.min_response_context = 5000
         self.logger.debug(f'running with is_local={self.is_local}')
         self.logger.debug(f'running with config {self.config}')
 
@@ -106,7 +105,7 @@ class DocuGen(BaseDocsGenerator):
             logger=logger or logging.getLogger('docugen'),
         )
 
-        self.client = OpenAI(
+        self.client = openai.OpenAI(
             base_url=base_url,
             api_key=api_key if not self.is_local else 'ollama',
         )
@@ -125,27 +124,39 @@ class DocuGen(BaseDocsGenerator):
         Raises:
             GenerationError: If documentation generation fails
         """
+        if not isinstance(source, str):
+            raise TypeError(
+                f'source parameter can only of type string, received {type(source)}'
+            )
+
+        if source == '':
+            raise ValueError('source parameter cannot be empty')
+
         try:
             prompt = self._build_prompt(source, context)
-
-            if not is_text_within_context(
-                prompt, self.config['max_context'], self.config['ai_model']
-            ):
-                raise ValueError('prompt is too long')
-
             return self._generate_documentation(prompt)
-        except Exception as e:
+        except openai.OpenAIError as e:
             self.logger.error('Documentation generation failed: %s', str(e))
             raise GenerationError('Failed to generate documentation') from e
 
-    def _build_prompt(self, source, context: str=None):
+    def _build_prompt(self, source, context: str = None):
         """Construct a compact LLM prompt"""
         prompt_lines = ['```python', source.strip(), '```']
 
         if context:
             prompt_lines.append('Additional context: {0}'.format(context))
 
-        return '\n'.join(prompt_lines)[: self.config['max_context']]
+        prompt = '\n'.join(prompt_lines)
+        trimmed_prompt = prompt[: self.config['max_context']]
+
+        if len(trimmed_prompt) < len(prompt):
+            self.logger.warning(
+                'Prompt was trimmed from %d to %d characters to fit context window',
+                len(prompt),
+                len(trimmed_prompt),
+            )
+
+        return trimmed_prompt
 
     def generate_system_prompt(self):
         user_provided_constraints = '\n'.join(self.config['constraints'])
@@ -176,28 +187,24 @@ class DocuGen(BaseDocsGenerator):
         """Execute the LLM documentation generation"""
         system_prompt = self.generate_system_prompt()
         tokenizer = self.get_tokenizer()
-        tokens = tokenizer.encode(f"{system_prompt}\n{prompt}\n")
+        tokens = tokenizer.encode(f'{system_prompt}\n{prompt}\n')
 
-        if len(tokens) > self.config['max_context']:
-            raise ValueError("Prompt exceeds max_context limit.")
+        if len(tokens) > (self.config['max_context'] - self.min_response_context):
+            raise ValueError('Prompt exceeds max_context limit.')
 
         remaining_tokens_count = self.config['max_context'] - len(tokens)
 
-        try:
-            response = self.client.beta.chat.completions.parse(
-                model=self.config['ai_model'],
-                messages=[
-                    {'role': 'system', 'content': self.generate_system_prompt()},
-                    {'role': 'user', 'content': prompt},
-                ],
-                temperature=0.3,
-                max_tokens=remaining_tokens_count,
-                response_format=LLMDocstringResponse,
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            self.logger.error(f'[{type(e)}] LLM API call failed: %s', str(e))
-            raise
+        response = self.client.beta.chat.completions.parse(
+            model=self.config['ai_model'],
+            messages=[
+                {'role': 'system', 'content': self.generate_system_prompt()},
+                {'role': 'user', 'content': prompt},
+            ],
+            temperature=0.3,
+            max_tokens=remaining_tokens_count,
+            response_format=LLMDocstringResponse,
+        )
+        return response.choices[0].message.content
 
     def get_encoding(self):
         return 'cl100k_base'

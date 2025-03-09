@@ -22,14 +22,14 @@ class LLMDocstringSingleResponse(BaseModel):
         description=(
             'This is True if the parser should indent the first line, False otherwise '
             'this is False if the assistant added the spacing'
-        )
+        ),
     )
     should_add_newline_at_the_end: bool = Field(
         default=False,
         description=(
             'This is true if the parser should add a new line at the end of the text, before the quotes, false otherwise.'
             'this is False if the assistant added the spacing'
-            'New lines need only to be added if the response doesn\'t span a full line. '
+            "New lines need only to be added if the response doesn't span a full line. "
             'Oneliners less than 88 characters or single sentences should not end with a newline.'
         ),
     )

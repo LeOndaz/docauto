@@ -268,12 +268,14 @@ class DocuGenCLI(BaseCLI):
 
         except SystemExit as e:
             self.logger.error(
-                f'Invalid arguments: {str(e)}', exc_info=True,
+                f'Invalid arguments: {str(e)}',
+                exc_info=True,
             )
             return 1
         except Exception as e:
             self.logger.error(
-                f'Operation failed: {str(e)}', exc_info=parsed_args.verbose,
+                f'Operation failed: {str(e)}',
+                exc_info=parsed_args.verbose,
             )
             return 1
 
