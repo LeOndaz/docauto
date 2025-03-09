@@ -1,16 +1,15 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Callable, Optional, TypedDict, Union
+from typing import Callable, Optional, TypedDict, Union
 from openai import OpenAI
-from pydantic import BaseModel
-from docugen.config import Config, LLMDocstringResponse
+from docugen.config import APIConfig
+from docugen.models import LLMDocstringResponse
+from docugen.exceptions import GenerationError
 from docugen.utils import (
-    extract_docstring_content,
     is_text_within_context,
     is_valid_string_iterable,
-    remove_function_definition,
-    remove_markdown_fences,
 )
+import tiktoken
 
 
 class LLMResponseSanitizerDict(TypedDict):
@@ -25,8 +24,6 @@ LLMResponseSanitizer = Union[LLMResponseSanitizerDict, Callable]
 
 class BaseDocsGenerator(ABC):
     """Base documentation generator."""
-
-    response_model: BaseModel = None
 
     @abstractmethod
     def __init__(
@@ -53,13 +50,7 @@ class BaseDocsGenerator(ABC):
         if logger is not None and not isinstance(logger, logging.Logger):
             raise TypeError('logger must be a Logger instance or None')
 
-        if self.response_model and (
-            not issubclass(self.response_model, BaseModel)
-            or not hasattr(self.response_model, 'model_validate_json')
-        ):
-            raise TypeError('response_model must be a pydantic BaseModel subclass')
-
-        self.config: Config = {
+        self.config: APIConfig = {
             'base_url': base_url,
             'ai_model': ai_model,
             'api_key': api_key,
@@ -73,8 +64,11 @@ class BaseDocsGenerator(ABC):
 
         self.logger = logger
 
+        self.logger.debug(f'running with is_local={self.is_local}')
+        self.logger.debug(f'running with config {self.config}')
+
     @abstractmethod
-    def generate(self, source, additional_context=None):
+    def generate(self, source, context=None):
         pass
 
 
@@ -103,9 +97,6 @@ class DocuGen(BaseDocsGenerator):
             ValueError: If no API key is provided
         """
 
-        if self.response_model is None:
-            self.response_model = LLMDocstringResponse
-
         super().__init__(
             base_url=base_url,
             ai_model=ai_model,
@@ -120,45 +111,39 @@ class DocuGen(BaseDocsGenerator):
             api_key=api_key if not self.is_local else 'ollama',
         )
 
-    def generate(self, source, additional_context=None):
+    def generate(self, source, context=None):
         """
         Generate documentation for a function.
 
         Args:
             source (callable): Function to document
-            additional_context (str): Additional context for documentation
+            context (str): Additional context for documentation
 
         Returns:
             str: Generated documentation
 
         Raises:
-            RuntimeError: If documentation generation fails
+            GenerationError: If documentation generation fails
         """
         try:
-            prompt = self._build_prompt(source, additional_context)
+            prompt = self._build_prompt(source, context)
 
             if not is_text_within_context(
                 prompt, self.config['max_context'], self.config['ai_model']
             ):
                 raise ValueError('prompt is too long')
 
-            response_content = self._generate_documentation(prompt)
-
-            try:
-                return self.response_model.model_validate_json(response_content)
-            except Exception as e:
-                self.logger.warning(f'Failed to parse LLM response as JSON: {e}')
-                return response_content
+            return self._generate_documentation(prompt)
         except Exception as e:
             self.logger.error('Documentation generation failed: %s', str(e))
-            raise RuntimeError('Failed to generate documentation') from e
+            raise GenerationError('Failed to generate documentation') from e
 
-    def _build_prompt(self, source, additional_context):
+    def _build_prompt(self, source, context: str=None):
         """Construct a compact LLM prompt"""
         prompt_lines = ['```python', source.strip(), '```']
 
-        if additional_context:
-            prompt_lines.append('Additional context: {0}'.format(additional_context))
+        if context:
+            prompt_lines.append('Additional context: {0}'.format(context))
 
         return '\n'.join(prompt_lines)[: self.config['max_context']]
 
@@ -169,8 +154,7 @@ class DocuGen(BaseDocsGenerator):
             You're a professional documentation writer.
 
             You'll be provided with a function/class sourcecode to document.
-            The user will likely provide a format, stick to it. If not, use python sphinx format
-			for docstrings.
+            The user will likely provide a format, stick to it.
 
             You're to only to respond within the constraints below.
             
@@ -178,8 +162,8 @@ class DocuGen(BaseDocsGenerator):
             1. You keep it short, precise and accurate. 
             2. You don't ask questions.
             3. You don't make any assumptions. You use only the facts you're provided.
-			4. You respond with a markdown block of code ```plaintext[TEXT_HERE]\n``` that has the  docstring text, without docstring quotes.
-            5. Respond in spihx docstring format if the usert doesn't provide a format.
+			4. Don't respond with the docstring quotes.
+            5. Respond in spihx docstring format if the user doesn't provide a format.
             
             User constraints:
                 {user_provided_constraints}
@@ -190,6 +174,15 @@ class DocuGen(BaseDocsGenerator):
 
     def _generate_documentation(self, prompt):
         """Execute the LLM documentation generation"""
+        system_prompt = self.generate_system_prompt()
+        tokenizer = self.get_tokenizer()
+        tokens = tokenizer.encode(f"{system_prompt}\n{prompt}\n")
+
+        if len(tokens) > self.config['max_context']:
+            raise ValueError("Prompt exceeds max_context limit.")
+
+        remaining_tokens_count = self.config['max_context'] - len(tokens)
+
         try:
             response = self.client.beta.chat.completions.parse(
                 model=self.config['ai_model'],
@@ -198,10 +191,16 @@ class DocuGen(BaseDocsGenerator):
                     {'role': 'user', 'content': prompt},
                 ],
                 temperature=0.3,
-                max_tokens=self.config['max_context'],
+                max_tokens=remaining_tokens_count,
                 response_format=LLMDocstringResponse,
             )
             return response.choices[0].message.content
         except Exception as e:
             self.logger.error(f'[{type(e)}] LLM API call failed: %s', str(e))
             raise
+
+    def get_encoding(self):
+        return 'cl100k_base'
+
+    def get_tokenizer(self):
+        return tiktoken.get_encoding(self.get_encoding())

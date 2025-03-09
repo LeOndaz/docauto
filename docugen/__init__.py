@@ -1,5 +1,5 @@
 from docugen.cli import DocuGenCLI
-from docugen.config import Config
+from docugen.config import APIConfig
 from docugen.exceptions import InvalidPythonModule
 from docugen.generator import BaseDocsGenerator, DocuGen
 from docugen.services import DocumentationService
@@ -9,7 +9,7 @@ __all__ = (
     'BaseDocsGenerator',
     'DocTransformer',
     'DocuGen',
-    'Config',
+    'APIConfig',
     'DocumentationService',
     'InvalidPythonModule',
     'DocuGenCLI',

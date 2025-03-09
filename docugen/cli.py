@@ -5,16 +5,27 @@ import sys
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, TypedDict
 
-from docugen.config import OLLAMA_PRESET, OPENAI_PRESET, Config, create_config
+from docugen.config import (
+    OLLAMA_PRESET,
+    OPENAI_PRESET,
+    GEMINI_PRESET,
+    APIConfig,
+    create_config,
+)
 from docugen.generator import DocuGen
+from docugen.logger import SmartFormatter
+from docugen.parsers import LLMDocstringResponseParser
 from docugen.services import DocumentationService, FileSystemService
 
 
 class CLIArgs(TypedDict, total=False):
     """Type-safe CLI arguments"""
 
+    # presets
     ollama: bool
     openai: bool
+    gemini: bool
+
     base_url: Optional[str]
     api_key: Optional[str]
     ai_model: Optional[str]
@@ -23,6 +34,7 @@ class CLIArgs(TypedDict, total=False):
     dry_run: bool
     verbose: bool
     paths: List[str]
+    overwrite: bool
 
 
 class BaseCLI(ABC):
@@ -35,6 +47,7 @@ class BaseCLI(ABC):
     ) -> None:
         self.fs_service = fs_service
         self.logger = logger or logging.getLogger('docugen')
+        self.response_parser = LLMDocstringResponseParser(self.logger)
         self._setup_signal_handlers()
         self._shutdown_requested = False
 
@@ -68,16 +81,20 @@ class BaseCLI(ABC):
 class PresetManager:
     """Registry and manager for preset configurations"""
 
-    _presets: Dict[str, Config] = {'ollama': OLLAMA_PRESET, 'openai': OPENAI_PRESET}
+    _presets: Dict[str, APIConfig] = {
+        'ollama': OLLAMA_PRESET,
+        'openai': OPENAI_PRESET,
+        'gemini': GEMINI_PRESET,
+    }
 
     @classmethod
-    def get_preset(cls, name: str) -> Config:
+    def get_preset(cls, name: str) -> APIConfig:
         if name not in cls._presets:
             raise ValueError(f'Unknown preset: {name}')
         return cls._presets[name]
 
     @classmethod
-    def register_preset(cls, name: str, config: Config) -> None:
+    def register_preset(cls, name: str, config: APIConfig) -> None:
         cls._presets[name] = config
 
 
@@ -92,6 +109,9 @@ class DocuGenCLI(BaseCLI):
         )
         preset_group.add_argument(
             '--openai', action='store_true', help='Use OpenAI preset'
+        )
+        preset_group.add_argument(
+            '--gemini', action='store_true', help='Use Gemini preset'
         )
 
         parser.add_argument('-b', '--base-url', help='API base URL')
@@ -114,6 +134,12 @@ class DocuGenCLI(BaseCLI):
             help='Show changes without modifying files',
         )
         parser.add_argument(
+            '-o',
+            '--overwrite',
+            action='store_true',
+            help='[Dangerous] Overwrite existing docstrings in codebase',
+        )
+        parser.add_argument(
             '-v', '--verbose', action='store_true', help='Enable verbose logging'
         )
         parser.add_argument('paths', nargs='+', help='Files/directories to process')
@@ -121,13 +147,15 @@ class DocuGenCLI(BaseCLI):
 
     def _configure_logging(self, verbose: bool) -> None:
         level = logging.DEBUG if verbose else logging.WARNING
-        logging.basicConfig(
-            level=level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[logging.StreamHandler()],
+        handler = logging.StreamHandler()
+        formatter = SmartFormatter(
+            default_format='[%(levelname)s] [%(asctime)s] [%(name)s]: %(message)s'
         )
+        handler.setFormatter(formatter)
+        self.logger.setLevel(level)
+        self.logger.addHandler(handler)
 
-    def _merge_configuration(self, args: CLIArgs) -> Config:
+    def _merge_configuration(self, args: CLIArgs) -> APIConfig:
         """Merge CLI arguments with preset configuration"""
         preset = None
         config = {}
@@ -137,6 +165,10 @@ class DocuGenCLI(BaseCLI):
             preset = PresetManager.get_preset('ollama')
         elif args.get('openai'):
             preset = PresetManager.get_preset('openai')
+        elif args.get('gemini'):
+            preset = PresetManager.get_preset('gemini')
+        else:
+            self.logger.info('not using a predefined preset.')
 
         # Replace with preset values if available
         if preset:
@@ -191,6 +223,7 @@ class DocuGenCLI(BaseCLI):
             cli_args = CLIArgs(
                 ollama=parsed_args.ollama,
                 openai=parsed_args.openai,
+                gemini=parsed_args.gemini,
                 base_url=parsed_args.base_url,
                 api_key=parsed_args.api_key,
                 ai_model=parsed_args.ai_model,
@@ -199,6 +232,7 @@ class DocuGenCLI(BaseCLI):
                 dry_run=parsed_args.dry_run,
                 verbose=parsed_args.verbose,
                 paths=parsed_args.paths,
+                overwrite=parsed_args.overwrite,
             )
             self._configure_logging(cli_args['verbose'])
 
@@ -212,8 +246,10 @@ class DocuGenCLI(BaseCLI):
                     constraints=config['constraints'],
                     logger=self.logger,
                 ),
-                self.fs_service,
-                self.logger,
+                overwrite=cli_args['overwrite'],
+                fs_service=self.fs_service,
+                parser=self.response_parser,
+                logger=self.logger,
             )
 
             file_count, updated_count = self._process_files(
@@ -231,11 +267,13 @@ class DocuGenCLI(BaseCLI):
             return 0
 
         except SystemExit as e:
-            self.logger.error(f'Invalid arguments: {str(e)}')
+            self.logger.error(
+                f'Invalid arguments: {str(e)}', exc_info=True,
+            )
             return 1
         except Exception as e:
             self.logger.error(
-                f'Operation failed: {str(e)}', exc_info=parsed_args.verbose
+                f'Operation failed: {str(e)}', exc_info=parsed_args.verbose,
             )
             return 1
 

@@ -1,11 +1,13 @@
 import logging
+from docugen.logger import SmartFormatter
 from pathlib import Path
 
 import pytest
 
 from docugen import DocuGen, DocuGenCLI, DocumentationService
-from docugen.config import Config
+from docugen.config import APIConfig
 from docugen.fs import FileSystemService
+from docugen.parsers import LLMDocstringResponseParser
 from docugen.tracker import ProgressTracker
 from docugen.transformers import DocTransformer
 from unittest.mock import patch
@@ -70,7 +72,17 @@ class TrackedFileSystem(FileSystemService):
 
 @pytest.fixture
 def logger():
-    return logging.getLogger('docugen_tests')
+    handler = logging.StreamHandler()
+    formatter = SmartFormatter(
+        default_format='[%(levelname)s] [%(asctime)s] [%(name)s]: %(message)s'
+    )
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger('test_docugen')
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+
+    return logger
 
 
 @pytest.fixture
@@ -80,13 +92,22 @@ def generator(config):
 
 
 @pytest.fixture
+def parser():
+    return LLMDocstringResponseParser()
+
+
+@pytest.fixture
 def file_system(logger):
     return TrackedFileSystem(logger)
 
 
 @pytest.fixture
 def docs_service(generator, logger, file_system):
-    return DocumentationService(generator, file_system, logger)
+    return DocumentationService(
+        generator=generator,
+        fs_service=file_system,
+        logger=logger,
+    )
 
 
 @pytest.fixture
@@ -103,7 +124,7 @@ def files_for_testing():
 
 @pytest.fixture
 def config():
-    return Config(
+    return APIConfig(
         **{
             'base_url': 'http://localhost:11434/v1',
             'ai_model': 'phi4',
@@ -118,9 +139,14 @@ def config():
 
 
 @pytest.fixture
-def transformer(generator, logger):
+def transformer(generator, logger, parser):
     """Fixture for creating a DocTransformer instance."""
-    return DocTransformer(generator, logger)
+    return DocTransformer(
+        generator=generator,
+        logger=logger,
+        parser=parser,
+        overwrite=True,
+    )
 
 
 @pytest.fixture

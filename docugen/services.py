@@ -15,26 +15,26 @@ from docugen.transformers import DocTransformer
 class DocumentationService:
     """Service for processing files and generating documentation"""
 
-    transformer_class: DocTransformer = None
-
     def __init__(
         self,
         generator: BaseDocsGenerator,
         fs_service: Optional[FileSystemService] = None,
         parser: Optional[LLMResponseParser] = None,
-        logger: Optional[logging.Logger] = None,
         progress_tracker: Optional[BaseProgressTracker] = None,
+        transformer: Optional[DocTransformer] = None,
+        overwrite: Optional[bool] = False,
+        logger: Optional[logging.Logger] = None,
     ):
         self.generator = generator
         self.parser = parser or LLMDocstringResponseParser()
         self.logger = logger or logging.getLogger('docugen')
         self.fs_service = fs_service or FileSystemService(self.logger)
         self.progress_tracker = progress_tracker or ProgressTracker(self.logger)
-        self.transformer = self.transformer_class(
+        self.transformer = transformer or DocTransformer(
             generator,
             parser,
             self.logger,
-            overwrite=True,
+            overwrite=overwrite,
             progress_tracker=self.progress_tracker,
         )
 

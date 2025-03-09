@@ -124,6 +124,11 @@ dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 
+[package.optional-dependencies]
+openai = [
+    { name = "tiktoken" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "isort" },
@@ -137,6 +142,7 @@ requires-dist = [
     { name = "libcst", specifier = ">=1.6.0" },
     { name = "openai", specifier = ">=1.64.0" },
     { name = "tiktoken", specifier = ">=0.9.0" },
+    { name = "tiktoken", marker = "extra == 'openai'", specifier = ">=0.9.0" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'", specifier = ">=4.0.0" },
 ]
 

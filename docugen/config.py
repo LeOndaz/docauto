@@ -1,9 +1,8 @@
 from types import MappingProxyType
 from typing import List, Optional, TypedDict
-from pydantic import BaseModel, Field
 
 
-class Config(TypedDict):
+class APIConfig(TypedDict):
     """Type-safe configuration for documentation generation"""
 
     base_url: str
@@ -11,31 +10,6 @@ class Config(TypedDict):
     api_key: Optional[str]
     max_context: int
     constraints: List[str]
-
-
-class LLMDocstringSingleResponse(BaseModel):
-    """Structured output model for a single LLM-generated docstring"""
-
-    content: str = Field(description='The generated docstring content')
-    format: str = Field(
-        default='sphinx',
-        description='The format of the docstring (e.g. sphinx, google)',
-    )
-    metadata: dict = Field(
-        default_factory=dict, description='Additional metadata about the generation'
-    )
-
-
-class LLMDocstringResponse(BaseModel):
-    """Container model for multiple LLM-generated docstrings"""
-
-    responses: List[LLMDocstringSingleResponse] = Field(
-        description='List of generated docstring responses'
-    )
-    metadata: dict = Field(
-        default_factory=dict,
-        description='Additional metadata about the overall generation',
-    )
 
 
 def create_config(
@@ -48,10 +22,12 @@ def create_config(
     """Create an immutable configuration dictionary"""
     if constraints is None:
         constraints = [
-            "Don't respond with anything other than code",
+            "Don't respond with anything other than valid code",
             """
                 Strictly respond in Sphinx documentation format.
                 Here's an example that uses sphinx:
+
+                \"\"\"Summary line.
 
                 :param [ParamName]: [ParamDescription], defaults to [DefaultParamVal]
                 :type [ParamName]: [ParamType](, optional)
@@ -60,13 +36,17 @@ def create_config(
                 ...
                 :return: [ReturnDescription]
                 :rtype: [ReturnType]
+                \"\"\"
 
                 A pair of :param: and :type: directive options must be used for each parameter we wish to document. The :raises: option is used to describe any errors that are raised by the code, while the :return: and :rtype: options are used to describe any values returned by our code. A more thorough explanation of the Sphinx docstring format can be found here.
 
                 Note that the ... notation has been used above to indicate repetition and should not be used when generating actual docstrings, as can be seen by the example presented below.
+
+                If there're no params, ignore the params section.
+                If there're no returned objects, ignore the :return.
+
             """,
-            'Provide a usage example unless stated otherwise.',
-            'Your respond will be taken as a docstring. Respond only with docstrings.',
+            'Single line docstrings should not end with any spacing',
         ]
 
     return MappingProxyType(
@@ -91,4 +71,10 @@ OPENAI_PRESET = create_config(
     base_url='https://api.openai.com/v1',
     ai_model='gpt-3.5-turbo',
     max_context=16384,
+)
+
+GEMINI_PRESET = create_config(
+    base_url='https://generativelanguage.googleapis.com/v1beta/openai/',
+    ai_model='gemini-2.0-flash-exp', # this is a free API
+    max_context=131_072
 )
