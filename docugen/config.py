@@ -78,3 +78,9 @@ GEMINI_PRESET = create_config(
     ai_model='gemini-2.0-flash-exp', # this is a free API
     max_context=131_072
 )
+
+DEEPSEEK_PRESET = create_config(
+    base_url="https://api.deepseek.com/v1",
+    ai_model="deepseek-chat",
+    max_context=65_536,
+)
