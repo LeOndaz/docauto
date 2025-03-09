@@ -1,8 +1,10 @@
 [project]
 name = "docugen"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.0.1"
+description = "A powerful Python documentation generator that swoops in to automatically create and maintain clean, comprehensive docstrings for your codebase"
 readme = "README.md"
+license = "MIT"
+entry-point = "dynamic"
 requires-python = ">=3.10"
 dependencies = [
     "libcst>=1.6.0",
@@ -10,14 +12,22 @@ dependencies = [
     "tiktoken>=0.9.0",
 ]
 
+[project.entry-points]
+console_scripts = [
+    "docugen = docugen.cli:main",
+]
+pre-commit = [
+    "docugen = docugen.cli:main",
+]
+
 [dependency-groups]
 dev = [
+    "build>=1.2.2.post1",
     "isort>=6.0.1",
     "pytest>=8.3.4",
     "ruff>=0.9.7",
     "setuptools>=75.8.2",
     "typing-extensions>=4.0.0; python_version < '3.11'",
-    "wheel>=0.45.1",
 ]
 
 [tool.pytest.ini_options]
