@@ -29,7 +29,7 @@ class BaseDocsGenerator(ABC):
     def __init__(
         self,
         base_url='https://api.openai.com/v1',
-        ai_model='gpt-3.5-turbo',
+        ai_model='gpt-4o-mini',
         api_key=None,
         max_context=16384,
         constraints=None,
@@ -78,7 +78,7 @@ class DocuGen(BaseDocsGenerator):
     def __init__(
         self,
         base_url='https://api.openai.com/v1',
-        ai_model='gpt-3.5-turbo',
+        ai_model='gpt-4o-mini',
         api_key=None,
         max_context=16384,
         constraints=None,

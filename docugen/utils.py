@@ -5,7 +5,7 @@ from collections.abc import Mapping, Iterable
 
 
 def is_text_within_context(
-    source_code: str, context_length: Optional[int] = None, model: str = 'gpt-3.5-turbo'
+    source_code: str, context_length: Optional[int] = None, model: str = 'gpt-4o-mini'
 ) -> bool:
     """
     Validate if text fits within specified token limit using tiktoken.
@@ -30,8 +30,8 @@ def is_text_within_context(
     try:
         encoder = tiktoken.encoding_for_model(model)
     except KeyError:
-        # resort to gpt-4o for now, idk what's the correct fallback
-        encoder = tiktoken.encoding_for_model('gpt-4o')
+        # resort to gpt-4o-mini for now, idk what's the correct fallback
+        encoder = tiktoken.encoding_for_model('gpt-4o-mini')
 
     token_count = len(encoder.encode(source_code))
 

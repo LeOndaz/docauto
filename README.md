@@ -31,8 +31,18 @@ python -m docugen --openai -k your_api_key [paths...]
 ```
 Uses the following configuration:
 - Base URL: https://api.openai.com/v1
-- Model: gpt-3.5-turbo
+- Model: gpt-4o-mini
 - Max Context: 16384
+- Requires API key
+
+#### Gemini Preset
+```bash
+python -m docugen --gemini -k your_api_key [paths...]
+```
+Uses the following configuration:
+- Base URL: https://generativelanguage.googleapis.com/v1beta/openai/
+- Model: gemini-2.0-flash-exp
+- Max Context: 131072
 - Requires API key
 
 ### Options
@@ -42,15 +52,10 @@ Uses the following configuration:
 - `-k, --api-key`: API key for authentication
 - `-m, --model`: AI model to use
 - `-mc, --max-context`: Maximum context size
-
-#### Documentation Constraints
 - `-c, --constraint`: Add a documentation constraint (can be used multiple times)
-
-#### Processing Options
 - `-d, --dry-run`: Show changes without modifying files
 - `-v, --verbose`: Enable verbose logging
-
-### Arguments
+- `-o, --overwrite`: [Dangerous] Overwrite existing docstrings in codebase
 - `paths`: One or more Python files or directories to process
 
 ### Examples

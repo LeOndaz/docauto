@@ -7,14 +7,14 @@ def test_docugen_initialization():
     generator = DocuGen(
         base_url='http://localhost:11434',
         api_key='test_key',
-        ai_model='gpt-3.5-turbo',
+        ai_model='gpt-4o-mini',
         max_context=1000,
         constraints=['test constraint'],
     )
 
     assert generator.config['base_url'] == 'http://localhost:11434'
     assert generator.config['api_key'] == 'test_key'
-    assert generator.config['ai_model'] == 'gpt-3.5-turbo'
+    assert generator.config['ai_model'] == 'gpt-4o-mini'
     assert generator.config['max_context'] == 1000
     assert generator.config['constraints'] == ['test constraint']
 

@@ -69,7 +69,7 @@ OLLAMA_PRESET = create_config(
 
 OPENAI_PRESET = create_config(
     base_url='https://api.openai.com/v1',
-    ai_model='gpt-3.5-turbo',
+    ai_model='gpt-4o-mini',
     max_context=16384,
 )
 

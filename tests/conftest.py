@@ -19,7 +19,7 @@ from openai.types.chat.chat_completion import Choice
 def mock_openai_response():
     return ChatCompletion(
         id='test_id',
-        model='gpt-3.5-turbo',
+        model='gpt-4o-mini',
         object='chat.completion',
         created=1234567890,
         choices=[

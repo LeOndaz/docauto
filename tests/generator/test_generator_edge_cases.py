@@ -10,7 +10,7 @@ from docugen.generator import DocuGen
 def mock_malformed_response():
     return ChatCompletion(
         id='test_id',
-        model='gpt-3.5-turbo',
+        model='gpt-4o-mini',
         object='chat.completion',
         created=1234567890,
         choices=[
