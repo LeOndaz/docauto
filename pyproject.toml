@@ -3,8 +3,7 @@ name = "docugen"
 version = "0.0.1"
 description = "A powerful Python documentation generator that swoops in to automatically create and maintain clean, comprehensive docstrings for your codebase"
 readme = "README.md"
-license = "MIT"
-entry-point = "dynamic"
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
     "libcst>=1.6.0",
@@ -12,13 +11,9 @@ dependencies = [
     "tiktoken>=0.9.0",
 ]
 
-[project.entry-points]
-console_scripts = [
-    "docugen = docugen.cli:main",
-]
-pre-commit = [
-    "docugen = docugen.cli:main",
-]
+[project.entry-points.console_scripts]
+docugen = "docugen.cli:main"
+
 
 [dependency-groups]
 dev = [
