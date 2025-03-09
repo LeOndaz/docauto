@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Iterable
+from collections.abc import Iterable, Mapping
 
 
 def is_valid_string_iterable(obj: Iterable) -> bool:

@@ -5,21 +5,21 @@ try:
 except ImportError:
     from typing_extensions import Generator
 
-import openai
-from docugen.logger import SmartFormatter
 from pathlib import Path
+from unittest.mock import patch
 
+import openai
 import pytest
+from openai.types.chat import ChatCompletion, ChatCompletionMessage
+from openai.types.chat.chat_completion import Choice
 
 from docugen import DocuGen, DocuGenCLI, DocumentationService
 from docugen.config import APIConfig
 from docugen.fs import FileSystemService
+from docugen.logger import SmartFormatter
 from docugen.parsers import LLMDocstringResponseParser
 from docugen.tracker import ProgressTracker
 from docugen.transformers import DocTransformer
-from unittest.mock import patch
-from openai.types.chat import ChatCompletion, ChatCompletionMessage
-from openai.types.chat.chat_completion import Choice
 
 
 @pytest.fixture
@@ -185,8 +185,9 @@ class Calculator:
 @pytest.fixture(autouse=True)
 def remove_test_file_docstrings(logger):
     """Fixture that automatically removes docstrings from test files before each test."""
-    import libcst as cst
     from pathlib import Path
+
+    import libcst as cst
 
     class DocstringRemover(cst.CSTTransformer):
         def leave_ClassDef(

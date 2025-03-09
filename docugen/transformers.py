@@ -1,14 +1,13 @@
 import logging
-from typing import Optional, Union, TypeVar, Generic
+from abc import abstractmethod
+from typing import Generic, Optional, TypeVar, Union
 
 import libcst as cst
 
-from docugen.generator import GenerationError, BaseDocsGenerator
+from docugen.generator import BaseDocsGenerator, GenerationError
 from docugen.models import LLMDocstringResponse
-from docugen.tracker import BaseProgressTracker, ProgressTracker
 from docugen.parsers import LLMResponseParser
-
-from abc import abstractmethod
+from docugen.tracker import BaseProgressTracker, ProgressTracker
 
 T = TypeVar('T')
 Node = Union[cst.FunctionDef, cst.ClassDef]

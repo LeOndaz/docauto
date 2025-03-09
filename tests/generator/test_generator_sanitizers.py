@@ -1,4 +1,5 @@
 import pytest
+
 from docugen.generator import DocuGen
 
 

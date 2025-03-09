@@ -1,6 +1,7 @@
-from openai import OpenAIError
-import pytest
 from unittest.mock import patch
+
+import pytest
+from openai import OpenAIError
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 

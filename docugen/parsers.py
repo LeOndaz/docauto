@@ -1,7 +1,9 @@
-from typing import TypeVar, Generic
-from pydantic import BaseModel
-from docugen.models import LLMDocstringResponse
 import logging
+from typing import Generic, TypeVar
+
+from pydantic import BaseModel
+
+from docugen.models import LLMDocstringResponse
 
 Model = TypeVar('Model', bound=BaseModel)
 

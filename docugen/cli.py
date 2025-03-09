@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, TypedDict
 
 from docugen.config import (
+    GEMINI_PRESET,
     OLLAMA_PRESET,
     OPENAI_PRESET,
-    GEMINI_PRESET,
     APIConfig,
     create_config,
 )
