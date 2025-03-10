@@ -1,10 +1,10 @@
-from docugen.generator import DocuGen
-from docugen.models import LLMDocstringResponse, LLMDocstringSingleResponse
+from docauto.generator import DocAutoGenerator
+from docauto.models import LLMDocstringResponse, LLMDocstringSingleResponse
 
 
-def test_docugen_initialization():
-    """Test DocuGen initialization with valid parameters"""
-    generator = DocuGen(
+def test_docauto_initialization():
+    """Test DocAutoCLI initialization with valid parameters"""
+    generator = DocAutoGenerator(
         base_url='http://localhost:11434',
         api_key='test_key',
         ai_model='gpt-4o-mini',
@@ -19,15 +19,15 @@ def test_docugen_initialization():
     assert generator.config['constraints'] == ['test constraint']
 
 
-def test_docugen_local_initialization():
-    """Test DocuGen initialization with local setup (no API key required)"""
-    generator = DocuGen(base_url='http://localhost:11434')
+def test_docauto_local_initialization():
+    """Test DocAutoCLI initialization with local setup (no API key required)"""
+    generator = DocAutoGenerator(base_url='http://localhost:11434')
     assert generator.client.api_key == 'ollama'
 
 
 def test_system_prompt_generation():
     """Test system prompt generation with various constraints"""
-    generator = DocuGen(
+    generator = DocAutoGenerator(
         base_url='http://localhost:11434',
         constraints=['Test constraint 1', 'Test constraint 2'],
     )
@@ -39,7 +39,7 @@ def test_system_prompt_generation():
 
 def test_additional_context_handling(mock_openai_client):
     """Test handling of additional context in prompt generation"""
-    generator = DocuGen(base_url='http://localhost:11434')
+    generator = DocAutoGenerator(base_url='http://localhost:11434')
     response = generator.generate('def test(): pass', context='Test context')
     assert isinstance(response, str)
     assert len(response) > 0

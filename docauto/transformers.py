@@ -4,10 +4,10 @@ from typing import Generic, Optional, TypeVar, Union
 
 import libcst as cst
 
-from docugen.generator import BaseDocsGenerator, GenerationError
-from docugen.models import LLMDocstringResponse
-from docugen.parsers import LLMResponseParser
-from docugen.tracker import BaseProgressTracker, ProgressTracker
+from docauto.generator import BaseDocsGenerator, GenerationError
+from docauto.models import LLMDocstringResponse
+from docauto.parsers import LLMResponseParser
+from docauto.tracker import BaseProgressTracker, ProgressTracker
 
 T = TypeVar('T')
 Node = Union[cst.FunctionDef, cst.ClassDef]
@@ -66,7 +66,7 @@ class BaseDocTransformer(cst.CSTTransformer, Generic[T]):
 
         self.parser = parser
         self.generator = generator
-        self.logger = logger or logging.getLogger('docugen')
+        self.logger = logger or logging.getLogger('docauto')
         self.overwrite = overwrite
         self.progress_tracker = progress_tracker or ProgressTracker(self.logger)
         super().__init__()

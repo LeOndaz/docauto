@@ -16,7 +16,7 @@ class BaseProgressTracker:
     """Base class for tracking progress during documentation generation"""
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        self.logger = logger or logging.getLogger('docugen')
+        self.logger = logger or logging.getLogger('docauto')
         self.tracked_object: Dict[str, List[cst.CSTNode]] = {}
 
     def track_file(self, file_path: str) -> None:

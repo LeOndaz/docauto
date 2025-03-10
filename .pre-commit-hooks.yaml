@@ -1,7 +1,7 @@
 - id: auto-document
   name: Automatic API Documentation
   description: Automatically generates documentation for modified Python functions
-  entry: docugen pre-commit
+  entry: docauto pre-commit
   language: python
   types: [python]
   require_serial: true

@@ -4,12 +4,12 @@ from typing import Optional, Union
 
 import libcst as cst
 
-from docugen.exceptions import InvalidPythonModule
-from docugen.fs import FileSystemService
-from docugen.generator import BaseDocsGenerator
-from docugen.parsers import LLMDocstringResponseParser, LLMResponseParser
-from docugen.tracker import BaseProgressTracker, ProgressTracker
-from docugen.transformers import DocTransformer
+from docauto.exceptions import InvalidPythonModule
+from docauto.fs import FileSystemService
+from docauto.generator import BaseDocsGenerator
+from docauto.parsers import LLMDocstringResponseParser, LLMResponseParser
+from docauto.tracker import BaseProgressTracker, ProgressTracker
+from docauto.transformers import DocTransformer
 
 
 class DocumentationService:
@@ -27,7 +27,7 @@ class DocumentationService:
     ):
         self.generator = generator
         self.parser = parser or LLMDocstringResponseParser()
-        self.logger = logger or logging.getLogger('docugen')
+        self.logger = logger or logging.getLogger('docauto')
         self.fs_service = fs_service or FileSystemService(self.logger)
         self.progress_tracker = progress_tracker or ProgressTracker(self.logger)
         self.transformer = transformer or DocTransformer(

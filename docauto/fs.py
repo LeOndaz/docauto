@@ -32,7 +32,7 @@ class FileSystemService(BaseFileSystem):
     """Service for file system operations with easier testing support"""
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        self.logger = logger or logging.getLogger('docugen')
+        self.logger = logger or logging.getLogger('docauto')
 
     def read_file(self, path: Path) -> str:
         """Read file content"""

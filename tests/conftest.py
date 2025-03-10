@@ -1,5 +1,7 @@
 import logging
 
+from docauto.services import DocumentationService
+
 try:
     from typing import Generator
 except ImportError:
@@ -13,13 +15,14 @@ import pytest
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 
-from docugen import DocuGen, DocuGenCLI, DocumentationService
-from docugen.config import APIConfig
-from docugen.fs import FileSystemService
-from docugen.logger import SmartFormatter
-from docugen.parsers import LLMDocstringResponseParser
-from docugen.tracker import ProgressTracker
-from docugen.transformers import DocTransformer
+from docauto.config import APIConfig
+from docauto.fs import FileSystemService
+from docauto.logger import SmartFormatter
+from docauto.parsers import LLMDocstringResponseParser
+from docauto.tracker import ProgressTracker
+from docauto.transformers import DocTransformer
+from docauto.cli import DocAutoCLI
+from docauto.generator import DocAutoGenerator
 
 
 @pytest.fixture
@@ -85,7 +88,7 @@ def logger():
     )
     handler.setFormatter(formatter)
 
-    logger = logging.getLogger('test_docugen')
+    logger = logging.getLogger('test_docauto')
     logger.setLevel(logging.DEBUG)
     logger.addHandler(handler)
 
@@ -95,7 +98,7 @@ def logger():
 @pytest.fixture
 def generator(config):
     # use a better serialization way
-    return DocuGen(**config)
+    return DocAutoGenerator(**config)
 
 
 @pytest.fixture
@@ -119,8 +122,8 @@ def docs_service(generator, logger, file_system):
 
 @pytest.fixture
 def cli(logger, file_system):
-    """Fixture for creating a DocuGenCLI instance."""
-    return DocuGenCLI(file_system, logger)
+    """Fixture for creating a DocAutoCLI instance."""
+    return DocAutoCLI(file_system, logger)
 
 
 @pytest.fixture

@@ -1,24 +1,24 @@
-# DocuGen
+# DocAuto
 
 A tool for generating documentation from code using LLMs.
 
 ## CLI Usage
 
-DocuGen provides a command-line interface for generating documentation from your code. The CLI is implemented in `cli.py` and offers several commands and options.
+DocAuto provides a command-line interface for generating documentation from your code. The CLI is implemented in `cli.py` and offers several commands and options.
 
 ### Basic Usage
 
 ```bash
-python -m docugen [paths...] [options]
+python -m docauto [paths...] [options]
 ```
 
 ### Preset Configurations
 
-DocuGen provides preset configurations for popular LLM services:
+DocAuto provides preset configurations for popular LLM services:
 
 #### Ollama Preset
 ```bash
-python -m docugen --ollama [paths...]
+python -m docauto --ollama [paths...]
 ```
 Uses the following configuration:
 - Base URL: http://localhost:11434/v1
@@ -27,7 +27,7 @@ Uses the following configuration:
 
 #### OpenAI Preset
 ```bash
-python -m docugen --openai -k your_api_key [paths...]
+python -m docauto --openai -k your_api_key [paths...]
 ```
 Uses the following configuration:
 - Base URL: https://api.openai.com/v1
@@ -37,7 +37,7 @@ Uses the following configuration:
 
 #### Gemini Preset
 ```bash
-python -m docugen --gemini -k your_api_key [paths...]
+python -m docauto --gemini -k your_api_key [paths...]
 ```
 Uses the following configuration:
 - Base URL: https://generativelanguage.googleapis.com/v1beta/openai/
@@ -62,22 +62,22 @@ Uses the following configuration:
 
 ```bash
 # Process a single file
-python -m docugen example.py
+python -m docauto example.py
 
 # Process multiple files with API key
-python -m docugen file1.py file2.py -k your_api_key
+python -m docauto file1.py file2.py -k your_api_key
 
 # Process a directory in dry-run mode
-python -m docugen ./src -d
+python -m docauto ./src -d
 
 # Process with custom model and verbose logging
-python -m docugen ./src -m gpt-4 -v
+python -m docauto ./src -m gpt-4 -v
 
 # Use Ollama preset for local processing
-python -m docugen ./src --ollama
+python -m docauto ./src --ollama
 
 # Use OpenAI preset with API key
-python -m docugen ./src --openai -k your_api_key
+python -m docauto ./src --openai -k your_api_key
 ```
 
 The tool will process the specified Python files, generate documentation using the configured LLM, and update the files with the generated documentation. Use the `--dry-run` option to preview changes without modifying files.

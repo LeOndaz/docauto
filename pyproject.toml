@@ -1,10 +1,10 @@
 [project]
-name = "docugen"
+name = "docauto"
 version = "0.0.1"
 description = "A powerful Python documentation generator that swoops in to automatically create and maintain clean, comprehensive docstrings for your codebase"
 readme = "README.md"
-license = { file = "LICENSE" }
-requires-python = ">=3.10"
+license = { text = "MIT" }
+requires-python = ">=3.6"
 dependencies = [
     "libcst>=1.6.0",
     "openai>=1.64.0",
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.entry-points.console_scripts]
-docugen = "docugen.cli:main"
+docauto = "docauto.cli:main"
 
 
 [dependency-groups]
@@ -29,3 +29,6 @@ dev = [
 pythonpath = [
   "src"
 ]
+
+[tool.setuptools]
+license-files = []

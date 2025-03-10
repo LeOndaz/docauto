@@ -5,10 +5,10 @@ from typing import Callable, Optional, TypedDict, Union
 import openai
 import tiktoken
 
-from docugen.config import APIConfig
-from docugen.exceptions import GenerationError
-from docugen.models import LLMDocstringResponse
-from docugen.utils import is_valid_string_iterable
+from docauto.config import APIConfig
+from docauto.exceptions import GenerationError
+from docauto.models import LLMDocstringResponse
+from docauto.utils import is_valid_string_iterable
 
 
 class LLMResponseSanitizerDict(TypedDict):
@@ -71,7 +71,7 @@ class BaseDocsGenerator(ABC):
         pass
 
 
-class DocuGen(BaseDocsGenerator):
+class DocAutoGenerator(BaseDocsGenerator):
     """Python function documentation generator with minimal preprocessing"""
 
     def __init__(
@@ -102,7 +102,7 @@ class DocuGen(BaseDocsGenerator):
             api_key=api_key,
             max_context=max_context,
             constraints=constraints,
-            logger=logger or logging.getLogger('docugen'),
+            logger=logger or logging.getLogger('docauto'),
         )
 
         self.client = openai.OpenAI(

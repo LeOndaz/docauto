@@ -2,12 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from docugen.cli import DocuGenCLI
+from docauto.cli import DocAutoCLI
 
 
 def test_cli_initialization(cli, logger):
     """Test CLI initialization with logger"""
-    assert isinstance(cli, DocuGenCLI)
+    assert isinstance(cli, DocAutoCLI)
     assert cli.logger == logger
 
 

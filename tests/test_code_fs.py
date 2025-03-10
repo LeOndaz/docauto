@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from docugen.fs import FileSystemService
+from docauto.fs import FileSystemService
 
 
 @pytest.fixture
@@ -108,7 +108,7 @@ def test_resolve_paths_edge_cases(file_system, tmp_files, caplog):
 
 def test_logger_initialization():
     service = FileSystemService()
-    assert service.logger.name == 'docugen'
+    assert service.logger.name == 'docauto'
 
     custom_logger = logging.getLogger('test')
     service = FileSystemService(logger=custom_logger)

@@ -1,12 +1,10 @@
-from unittest.mock import patch
-
 import pytest
 from openai import OpenAIError
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 
-from docugen.exceptions import GenerationError
-from docugen.generator import DocuGen
+from docauto.exceptions import GenerationError
+from docauto.generator import DocAutoGenerator
 
 
 @pytest.fixture
@@ -37,7 +35,7 @@ def test_empty_source(generator):
 
 def test_max_context_limit():
     """Test handling of source code exceeding max context"""
-    generator = DocuGen(base_url='http://localhost:11434', max_context=10)
+    generator = DocAutoGenerator(base_url='http://localhost:11434', max_context=10)
     generator.min_response_context = 0
 
     with pytest.raises(ValueError, match='Prompt exceeds max_context limit.'):
@@ -58,13 +56,13 @@ def test_failed_llm_response(mock_openai_client, generator):
 def test_invalid_api_key():
     """Test initialization with invalid API key for non-local setup"""
     with pytest.raises(ValueError, match='API key is required'):
-        DocuGen(base_url='https://api.openai.com/v1')
+        DocAutoGenerator(base_url='https://api.openai.com/v1')
 
 
 def test_invalid_constraints():
     """Test handling of invalid constraints type"""
     with pytest.raises(TypeError):
-        DocuGen(
+        DocAutoGenerator(
             base_url='http://localhost:11434', constraints='invalid_constraints_type'
         )
 

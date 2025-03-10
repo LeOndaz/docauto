@@ -5,17 +5,17 @@ import sys
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, TypedDict
 
-from docugen.config import (
+from docauto.config import (
     GEMINI_PRESET,
     OLLAMA_PRESET,
     OPENAI_PRESET,
     APIConfig,
     create_config,
 )
-from docugen.generator import DocuGen
-from docugen.logger import SmartFormatter
-from docugen.parsers import LLMDocstringResponseParser
-from docugen.services import DocumentationService, FileSystemService
+from docauto.generator import DocAutoGenerator
+from docauto.logger import SmartFormatter
+from docauto.parsers import LLMDocstringResponseParser
+from docauto.services import DocumentationService, FileSystemService
 
 
 class CLIArgs(TypedDict, total=False):
@@ -46,7 +46,7 @@ class BaseCLI(ABC):
         logger: Optional[logging.Logger] = None,
     ) -> None:
         self.fs_service = fs_service
-        self.logger = logger or logging.getLogger('docugen')
+        self.logger = logger or logging.getLogger('docauto')
         self.response_parser = LLMDocstringResponseParser(self.logger)
         self._setup_signal_handlers()
         self._shutdown_requested = False
@@ -98,7 +98,7 @@ class PresetManager:
         cls._presets[name] = config
 
 
-class DocuGenCLI(BaseCLI):
+class DocAutoCLI(BaseCLI):
     """CLI implementation with proper preset handling and constraint merging."""
 
     def create_parser(self) -> argparse.ArgumentParser:
@@ -238,7 +238,7 @@ class DocuGenCLI(BaseCLI):
 
             config = self._merge_configuration(cli_args)
             doc_service = DocumentationService(
-                DocuGen(
+                DocAutoGenerator(
                     base_url=config['base_url'],
                     ai_model=config['ai_model'],
                     api_key=config['api_key'],
@@ -282,7 +282,7 @@ class DocuGenCLI(BaseCLI):
 
 def main() -> int:
     file_system = FileSystemService()
-    return DocuGenCLI(file_system).run()
+    return DocAutoCLI(file_system).run()
 
 
 if __name__ == '__main__':

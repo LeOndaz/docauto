@@ -1,9 +1,9 @@
 import pytest
 
-from docugen.generator import DocuGen
+from docauto.generator import DocAutoGenerator
 
 
 @pytest.fixture
 def generator():
-    """Create a DocuGen instance for testing"""
-    return DocuGen(base_url='http://localhost:11434')
+    """Create a DocAuto instance for testing"""
+    return DocAutoGenerator(base_url='http://localhost:11434')

@@ -3,7 +3,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from docugen.models import LLMDocstringResponse
+from docauto.models import LLMDocstringResponse
 
 Model = TypeVar('Model', bound=BaseModel)
 
@@ -14,7 +14,7 @@ class LLMResponseParser(Generic[Model]):
     def __init__(self, model: type[Model], logger: logging.Logger = None):
         """Initialize parser with model type."""
         self.model = model
-        self.logger = logger or logging.getLogger('docugen')
+        self.logger = logger or logging.getLogger('docauto')
 
     def parse(self, response: str) -> Model:
         """Parse LLM response into model instance."""

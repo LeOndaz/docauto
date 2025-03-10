@@ -1,7 +1,7 @@
 import libcst as cst
 
-from docugen.models import LLMDocstringResponse, LLMDocstringSingleResponse
-from docugen.parsers import LLMDocstringResponseParser
+from docauto.models import LLMDocstringResponse, LLMDocstringSingleResponse
+from docauto.parsers import LLMDocstringResponseParser
 
 
 def test_transformer_initialization(transformer):

@@ -201,7 +201,7 @@ wheels = [
 ]
 
 [[package]]
-name = "docugen"
+name = "docauto"
 version = "0.0.1"
 source = { virtual = "." }
 dependencies = [
