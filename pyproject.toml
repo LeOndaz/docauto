@@ -1,6 +1,6 @@
 [project]
 name = "docauto"
-version = "0.0.1"
+version = "0.0.2"
 description = "A powerful Python documentation generator that swoops in to automatically create and maintain clean, comprehensive docstrings for your codebase"
 readme = "README.md"
 license = { text = "MIT" }

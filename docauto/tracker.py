@@ -39,7 +39,6 @@ class ProgressTracker(BaseProgressTracker):
     def track_file(self, file_path: str) -> None:
         """Display file being processed and store it"""
         super().track_file(file_path)
-        print(f'\n{file_path}')
         self.logger.info(f'Processing {file_path}')
 
     def track_object(
@@ -49,7 +48,7 @@ class ProgressTracker(BaseProgressTracker):
         super().track_object(file_path, node, state)
         obj_type = 'class' if isinstance(node, cst.ClassDef) else 'function'
         obj_name = node.name.value
-        print(f'  | {obj_type} {obj_name} [{state.upper()}]')
+        self.logger.info(f'  | {obj_type} {obj_name} [{state.upper()}]')
 
     def get_tracked_objects(
         self, file_path: str

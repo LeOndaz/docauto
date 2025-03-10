@@ -22,4 +22,4 @@ else
 fi
 
 
-pytest -s -v --log-cli-level=DEBUG --capture=tee-sys tests/
+pytest -s --log-cli-level=WARNING --capture=tee-sys tests/
