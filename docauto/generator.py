@@ -11,16 +11,6 @@ from docauto.models import LLMDocstringResponse
 from docauto.utils import is_valid_string_iterable
 
 
-class LLMResponseSanitizerDict(TypedDict):
-    """TypedDict for sanitizer function."""
-
-    sanitizer: Callable[[str], str]
-    fail_silent: Optional[bool] = False
-
-
-LLMResponseSanitizer = Union[LLMResponseSanitizerDict, Callable]
-
-
 class BaseDocsGenerator(ABC):
     """Base documentation generator."""
 
