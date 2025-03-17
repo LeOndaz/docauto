@@ -3,42 +3,75 @@ import logging
 import signal
 import sys
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, TypedDict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from docauto.config import (
-    GEMINI_PRESET,
-    OLLAMA_PRESET,
-    OPENAI_PRESET,
-    APIConfig,
-    create_config,
-)
+try:
+    from typing import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
+
+import openai
+
+from docauto.config import DocAutoConfig
 from docauto.generator import DocAutoGenerator
-from docauto.logger import SmartFormatter
 from docauto.parsers import LLMDocstringResponseParser
+from docauto.presets import PresetManager
 from docauto.services import DocumentationService, FileSystemService
 
 
-class CLIArgs(TypedDict, total=False):
-    """Type-safe CLI arguments"""
-
-    # presets
-    ollama: bool
-    openai: bool
-    gemini: bool
-
-    base_url: Optional[str]
-    api_key: Optional[str]
-    ai_model: Optional[str]
-    max_context: Optional[int]
-    constraints: Optional[List[str]]
+# TypedDict configurations for CLI args
+class BaseConfig(TypedDict):
+    paths: List[str]
     dry_run: bool
     verbose: bool
-    paths: List[str]
     overwrite: bool
+    base_url: str
+    api_key: str
+
+
+class OllamaConfig(BaseConfig):
+    ollama: Literal[True]
+    api_key: Literal['ollama']
+
+
+class OpenAIConfig(BaseConfig):
+    openai: Literal[True]
+
+
+class GeminiConfig(BaseConfig):
+    gemini: Literal[True]
+
+
+class DeepSeekConfig(BaseConfig):
+    deepseek: Literal[True]
+
+
+CLIArgs = Union[
+    OllamaConfig,
+    OpenAIConfig,
+    GeminiConfig,
+    DeepSeekConfig,
+]
+
+
+@dataclass(frozen=True)
+class DocAutoCLIConfig(DocAutoConfig):
+    """Extended configuration incorporating CLI-specific settings"""
+
+    paths: List[str]
+
+    overwrite: bool = False
+    dry_run: bool = False
+    verbose: bool = False
+    ollama: bool = False
+    openai: bool = False
+    gemini: bool = False
+    deepseek: bool = False
 
 
 class BaseCLI(ABC):
-    """Abstract base class for CLI implementations with customization support."""
+    """Abstract base class for CLI implementations"""
 
     def __init__(
         self,
@@ -48,8 +81,8 @@ class BaseCLI(ABC):
         self.fs_service = fs_service
         self.logger = logger or logging.getLogger('docauto')
         self.response_parser = LLMDocstringResponseParser(self.logger)
-        self._setup_signal_handlers()
         self._shutdown_requested = False
+        self._setup_signal_handlers()
 
     def _setup_signal_handlers(self) -> None:
         signal.signal(signal.SIGINT, self._handle_shutdown)
@@ -59,7 +92,7 @@ class BaseCLI(ABC):
         if self._shutdown_requested:
             self.logger.warning('Forcing shutdown...')
             sys.exit(1)
-        self.logger.info('Graceful shutdown requested. Saving changes...')
+        self.logger.info('Graceful shutdown requested...')
         self._shutdown_requested = True
 
     @property
@@ -70,40 +103,35 @@ class BaseCLI(ABC):
     def create_parser(self) -> argparse.ArgumentParser:
         pass
 
-    def parse_args(self, args: Optional[List[str]] = None) -> CLIArgs:
-        return self.create_parser().parse_args(args)
+    def validate_args(self, args: Dict[str, Any] | None) -> None:
+        """Validate args after parsing"""
+
+    def parse_args(self, args: Optional[List[str]] = None) -> Dict[str, Any]:
+        args = vars(self.create_parser().parse_args(args))
+        self.validate_args(args)
+        return args
 
     @abstractmethod
     def run(self, args: Optional[List[str]] = None) -> int:
         pass
 
 
-class PresetManager:
-    """Registry and manager for preset configurations"""
-
-    _presets: Dict[str, APIConfig] = {
-        'ollama': OLLAMA_PRESET,
-        'openai': OPENAI_PRESET,
-        'gemini': GEMINI_PRESET,
-    }
-
-    @classmethod
-    def get_preset(cls, name: str) -> APIConfig:
-        if name not in cls._presets:
-            raise ValueError(f'Unknown preset: {name}')
-        return cls._presets[name]
-
-    @classmethod
-    def register_preset(cls, name: str, config: APIConfig) -> None:
-        cls._presets[name] = config
-
-
 class DocAutoCLI(BaseCLI):
-    """CLI implementation with proper preset handling and constraint merging."""
+    """CLI implementation with unified configuration handling"""
+
+    presets = ['ollama', 'openai', 'gemini', 'deepseek']
 
     def create_parser(self) -> argparse.ArgumentParser:
-        parser = argparse.ArgumentParser(description='Generate Python documentation')
-        preset_group = parser.add_mutually_exclusive_group()
+        parser = argparse.ArgumentParser(
+            description='AI-powered docstring generation',
+        )
+
+        def on_error(message):
+            raise argparse.ArgumentTypeError(message)
+
+        parser.error = on_error
+
+        preset_group = parser.add_mutually_exclusive_group(required=False)
         preset_group.add_argument(
             '--ollama', action='store_true', help='Use Ollama preset'
         )
@@ -113,176 +141,167 @@ class DocAutoCLI(BaseCLI):
         preset_group.add_argument(
             '--gemini', action='store_true', help='Use Gemini preset'
         )
+        preset_group.add_argument(
+            '--deepseek', action='store_true', help='Use Deepseek preset'
+        )
 
-        parser.add_argument('-b', '--base-url', help='API base URL')
-        parser.add_argument('-k', '--api-key', help='API key for authentication')
-        parser.add_argument('-m', '--model', dest='ai_model', help='AI model to use')
+        parser.add_argument('-b', '--base-url', help='Custom API base URL')
+        parser.add_argument('-k', '--api-key', help='API authentication key')
         parser.add_argument(
-            '-mc', '--max-context', type=int, help='Maximum context size'
+            '-m', '--model', dest='ai_model', help='Model to use for generation'
+        )
+        parser.add_argument(
+            '-mc', '--max-context', type=int, help='Max context window size'
         )
         parser.add_argument(
             '-c',
             '--constraint',
             dest='constraints',
             action='append',
-            help='Additional documentation constraints',
+            help='Documentation constraints',
         )
         parser.add_argument(
             '-d',
             '--dry-run',
             action='store_true',
-            help='Show changes without modifying files',
+            help='Simulate changes without writing',
         )
         parser.add_argument(
             '-o',
             '--overwrite',
             action='store_true',
-            help='[Dangerous] Overwrite existing docstrings in codebase',
+            help='Overwrite existing docstrings',
         )
         parser.add_argument(
-            '-v', '--verbose', action='store_true', help='Enable verbose logging'
+            '-v', '--verbose', action='store_true', help='Enable verbose output'
         )
         parser.add_argument('paths', nargs='+', help='Files/directories to process')
         return parser
 
-    def _configure_logging(self, verbose: bool) -> None:
-        level = logging.DEBUG if verbose else logging.WARNING
-        handler = logging.StreamHandler()
-        formatter = SmartFormatter(
-            default_format='[%(levelname)s] [%(asctime)s] [%(name)s]: %(message)s'
-        )
-        handler.setFormatter(formatter)
-        self.logger.setLevel(level)
-        self.logger.addHandler(handler)
+    def validate_args(self, args: Dict[str, Any]) -> None:
+        paths = args['paths']
 
-    def _merge_configuration(self, args: CLIArgs) -> APIConfig:
-        """Merge CLI arguments with preset configuration"""
-        preset = None
-        config = {}
+        if not self.fs_service.is_valid_paths(paths):
+            raise ValueError('Invalid path provided')
 
-        # Use dict.get() for safe access since TypedDict doesn't validate at runtime
-        if args.get('ollama'):
-            preset = PresetManager.get_preset('ollama')
-        elif args.get('openai'):
-            preset = PresetManager.get_preset('openai')
-        elif args.get('gemini'):
-            preset = PresetManager.get_preset('gemini')
-        else:
-            self.logger.info('not using a predefined preset.')
+    def resolve_config(self, args: Dict[str, Any]) -> DocAutoCLIConfig:
+        """Resolve and validate unified configuration from CLI args and presets"""
+        preset_name = self._get_active_preset(args)
 
-        # Replace with preset values if available
-        if preset:
-            config = preset
+        if preset_name:
+            preset = PresetManager.get_preset(preset_name)
 
-        # Override preset values with CLI arguments if provided
-        config_args = {
-            'base_url': args.get('base_url') or config.get('base_url'),
-            'ai_model': args.get('ai_model') or config.get('ai_model'),
-            'api_key': args.get('api_key') or config.get('api_key'),
-            'max_context': args.get('max_context') or config.get('max_context'),
-            'constraints': args.get('constraints') or config.get('constraints'),
+        # Merge preset with CLI arguments
+        merged_api = {
+            'base_url': args.get('base_url') or preset.api.base_url if preset else None,
+            'api_key': args.get('api_key') or preset.api.api_key if preset else None,
         }
 
-        config = create_config(**config_args)
+        merged_generation = {
+            'ai_model': args.get('ai_model') or preset.generation.ai_model
+            if preset
+            else None,
+            'max_context': args.get('max_context') or preset.generation.max_context
+            if preset
+            else None,
+            'constraints': args.get('constraints') or preset.generation.constraints
+            if preset
+            else None,
+        }
 
-        # Validate final configuration
-        if not config['base_url']:
-            raise ValueError('Base URL is required. Use a preset or provide --base-url')
-        if not config['ai_model']:
-            raise ValueError('AI model is required. Use a preset or provide --model')
-        if not config['api_key'] and 'localhost' not in config['base_url']:
-            raise ValueError('API key required for non-local configurations')
+        base_config = DocAutoConfig.create(
+            api=merged_api,
+            generation=merged_generation,
+        )
+        # Create extended CLI configuration
+        return DocAutoCLIConfig(
+            api=base_config.api,
+            generation=base_config.generation,
+            overwrite=args['overwrite'],
+            dry_run=args['dry_run'],
+            paths=args['paths'],
+            verbose=args['verbose'],
+        )
 
-        return config
+    def _get_active_preset(self, args: Dict[str, Any]) -> str:
+        """Identify which preset is being used"""
+        for preset in self.presets:
+            if args.get(preset):
+                return preset
+        return None
+
+    def configure_logging(self, verbose: bool) -> None:
+        """Set up logging infrastructure"""
+        level = logging.DEBUG if verbose else logging.INFO
+        self.logger.setLevel(level)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
+        self.logger.addHandler(handler)
 
     def _process_files(
         self,
-        docs_service: DocumentationService,
+        service: DocumentationService,
         paths: List[str],
         dry_run: bool,
     ) -> tuple[int, int]:
-        """Process files and return counts."""
-        file_count = 0
-        updated_count = 0
-        resolved_paths = list(self.fs_service.resolve_paths(paths))
-
-        if not resolved_paths:
-            raise ValueError('No valid files found to process')
-
-        for file_path in resolved_paths:
+        """Execute documentation processing workflow"""
+        processed = updated = 0
+        for path in self.fs_service.resolve_paths(paths):
             if self.shutdown_requested:
                 break
-            file_count += 1
-            if docs_service.process_file(file_path, dry_run):
-                updated_count += 1
-        return file_count, updated_count
+            processed += 1
+            if service.process_file(path, dry_run):
+                updated += 1
+        return processed, updated
 
     def run(self, args: Optional[List[str]] = None) -> int:
         try:
-            parsed_args = self.parse_args(args)
-            cli_args = CLIArgs(
-                ollama=parsed_args.ollama,
-                openai=parsed_args.openai,
-                gemini=parsed_args.gemini,
-                base_url=parsed_args.base_url,
-                api_key=parsed_args.api_key,
-                ai_model=parsed_args.ai_model,
-                max_context=parsed_args.max_context,
-                constraints=parsed_args.constraints,
-                dry_run=parsed_args.dry_run,
-                verbose=parsed_args.verbose,
-                paths=parsed_args.paths,
-                overwrite=parsed_args.overwrite,
-            )
-            self._configure_logging(cli_args['verbose'])
+            raw_args = self.parse_args(args)
+            config = self.resolve_config(raw_args)
+            self.configure_logging(raw_args['verbose'])
 
-            config = self._merge_configuration(cli_args)
+            # Initialize service components
+            client = openai.Client(
+                api_key=config.api.api_key,
+                base_url=config.api.base_url,
+            )
+
+            generator = DocAutoGenerator(
+                client=client,
+                ai_model=config.generation.ai_model,
+                max_context=config.generation.max_context,
+                constraints=config.generation.constraints,
+                logger=self.logger,
+            )
+
             doc_service = DocumentationService(
-                DocAutoGenerator(
-                    base_url=config['base_url'],
-                    ai_model=config['ai_model'],
-                    api_key=config['api_key'],
-                    max_context=config['max_context'],
-                    constraints=config['constraints'],
-                    logger=self.logger,
-                ),
-                overwrite=cli_args['overwrite'],
+                generator=generator,
+                overwrite=config.overwrite,
                 fs_service=self.fs_service,
                 parser=self.response_parser,
                 logger=self.logger,
             )
 
-            file_count, updated_count = self._process_files(
+            # Execute processing pipeline
+            total, updated = self._process_files(
                 doc_service,
-                parsed_args.paths,
-                parsed_args.dry_run,
+                raw_args['paths'],
+                config.dry_run,
             )
 
-            result_msg = (
-                f'Dry run: {updated_count}/{file_count} files would update'
-                if parsed_args.dry_run
-                else f'Processed: {updated_count}/{file_count} files updated'
+            self.logger.info(
+                f'Processed {total} files ({updated} updated)'
+                + (' [dry-run]' if config.dry_run else '')
             )
-            self.logger.info(result_msg)
             return 0
 
-        except SystemExit as e:
-            self.logger.error(
-                f'Invalid arguments: {str(e)}',
-                exc_info=True,
-            )
-            return 1
         except Exception as e:
-            self.logger.error(
-                f'Operation failed: {str(e)}',
-                exc_info=parsed_args.verbose,
-            )
+            self.logger.exception(f'Operation failed: {str(e)}')
             return 1
 
 
 def main() -> int:
-    file_system = FileSystemService()
-    return DocAutoCLI(file_system).run()
+    return DocAutoCLI(FileSystemService()).run()
 
 
 if __name__ == '__main__':

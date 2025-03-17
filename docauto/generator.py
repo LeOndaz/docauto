@@ -1,60 +1,37 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, Optional, TypedDict, Union
 
 import openai
 import tiktoken
 
-from docauto.config import APIConfig
+from docauto.config import GenerationConfig
 from docauto.exceptions import GenerationError
 from docauto.models import LLMDocstringResponse
-from docauto.utils import is_valid_string_iterable
+from docauto.types import GenerationOptions
+
+try:
+    from typing import Unpack
+except ImportError:
+    from typing_extensions import Unpack
 
 
 class BaseDocsGenerator(ABC):
     """Base documentation generator."""
 
+    config_class = GenerationConfig
+
     @abstractmethod
     def __init__(
         self,
-        base_url='https://api.openai.com/v1',
-        ai_model='gpt-4o-mini',
-        api_key=None,
-        max_context=16384,
-        constraints=None,
+        client: openai.OpenAI,
+        *,
         logger: logging.Logger = None,
+        **options: Unpack[GenerationOptions],
     ):
-        if not isinstance(base_url, str):
-            raise TypeError('base_url must be a string')
-        if not isinstance(ai_model, str):
-            raise TypeError('ai_model must be a string')
-        if api_key is not None and not isinstance(api_key, str):
-            raise TypeError('api_key must be a string or None')
-        if not isinstance(max_context, int):
-            raise TypeError('max_context must be an integer')
-        if not is_valid_string_iterable(constraints):
-            raise TypeError(
-                'constraints must be an iterable of strings (except dict, str, bytes) or None'
-            )
-        if logger is not None and not isinstance(logger, logging.Logger):
-            raise TypeError('logger must be a Logger instance or None')
-
-        self.config: APIConfig = {
-            'base_url': base_url,
-            'ai_model': ai_model,
-            'api_key': api_key,
-            'max_context': max_context,
-            'constraints': constraints or [],
-        }
-        self.is_local = 'localhost' in self.config['base_url']
-
-        if not self.is_local and not self.config['api_key']:
-            raise ValueError('API key is required for documentation generation')
-
         self.logger = logger
+        self.client = client
         self.min_response_context = 5000
-        self.logger.debug(f'running with is_local={self.is_local}')
-        self.logger.debug(f'running with config {self.config}')
+        self.config = self.config_class(**options)
 
     @abstractmethod
     def generate(self, source, context=None):
@@ -66,12 +43,10 @@ class DocAutoGenerator(BaseDocsGenerator):
 
     def __init__(
         self,
-        base_url='https://api.openai.com/v1',
-        ai_model='gpt-4o-mini',
-        api_key=None,
-        max_context=16384,
-        constraints=None,
+        client: openai.OpenAI,
+        *,
         logger: logging.Logger = None,
+        **config: Unpack[GenerationOptions],
     ):
         """
         Initialize the documentation generator.
@@ -87,17 +62,9 @@ class DocAutoGenerator(BaseDocsGenerator):
         """
 
         super().__init__(
-            base_url=base_url,
-            ai_model=ai_model,
-            api_key=api_key,
-            max_context=max_context,
-            constraints=constraints,
+            client,
             logger=logger or logging.getLogger('docauto'),
-        )
-
-        self.client = openai.OpenAI(
-            base_url=base_url,
-            api_key=api_key if not self.is_local else 'ollama',
+            **config,
         )
 
     def generate(self, source, context=None):
@@ -137,7 +104,7 @@ class DocAutoGenerator(BaseDocsGenerator):
             prompt_lines.append('Additional context: {0}'.format(context))
 
         prompt = '\n'.join(prompt_lines)
-        trimmed_prompt = prompt[: self.config['max_context']]
+        trimmed_prompt = prompt[: self.config.prompt_length_limit]
 
         if len(trimmed_prompt) < len(prompt):
             self.logger.warning(
@@ -149,7 +116,7 @@ class DocAutoGenerator(BaseDocsGenerator):
         return trimmed_prompt
 
     def generate_system_prompt(self):
-        user_provided_constraints = '\n'.join(self.config['constraints'])
+        user_provided_constraints = '\n'.join(self.config.constraints)
 
         return f"""
             You're a professional documentation writer.
@@ -179,13 +146,13 @@ class DocAutoGenerator(BaseDocsGenerator):
         tokenizer = self.get_tokenizer()
         tokens = tokenizer.encode(f'{system_prompt}\n{prompt}\n')
 
-        if len(tokens) > (self.config['max_context'] - self.min_response_context):
+        if len(tokens) > (self.config.max_context - self.min_response_context):
             raise ValueError('Prompt exceeds max_context limit.')
 
-        remaining_tokens_count = self.config['max_context'] - len(tokens)
+        remaining_tokens_count = self.config.max_context - len(tokens)
 
         response = self.client.beta.chat.completions.parse(
-            model=self.config['ai_model'],
+            model=self.config.ai_model,
             messages=[
                 {'role': 'system', 'content': self.generate_system_prompt()},
                 {'role': 'user', 'content': prompt},

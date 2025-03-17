@@ -2,34 +2,36 @@ from docauto.generator import DocAutoGenerator
 from docauto.models import LLMDocstringResponse, LLMDocstringSingleResponse
 
 
-def test_docauto_initialization():
+def test_docauto_initialization(mock_openai_client):
     """Test DocAutoCLI initialization with valid parameters"""
     generator = DocAutoGenerator(
-        base_url='http://localhost:11434',
-        api_key='test_key',
+        mock_openai_client,
         ai_model='gpt-4o-mini',
         max_context=1000,
         constraints=['test constraint'],
     )
 
-    assert generator.config['base_url'] == 'http://localhost:11434'
-    assert generator.config['api_key'] == 'test_key'
-    assert generator.config['ai_model'] == 'gpt-4o-mini'
-    assert generator.config['max_context'] == 1000
-    assert generator.config['constraints'] == ['test constraint']
+    assert generator.config.ai_model == 'gpt-4o-mini'
+    assert generator.config.max_context == 1000
+    assert generator.config.constraints == ['test constraint']
 
 
-def test_docauto_local_initialization():
+def test_docauto_local_initialization(mock_openai_client):
     """Test DocAutoCLI initialization with local setup (no API key required)"""
-    generator = DocAutoGenerator(base_url='http://localhost:11434')
-    assert generator.client.api_key == 'ollama'
+    generator = DocAutoGenerator(
+        client=mock_openai_client, max_context=10000, ai_model='phi4'
+    )
+    assert generator.config.ai_model == 'phi4'
+    assert generator.config.max_context == 10000
 
 
-def test_system_prompt_generation():
+def test_system_prompt_generation(mock_openai_client):
     """Test system prompt generation with various constraints"""
     generator = DocAutoGenerator(
-        base_url='http://localhost:11434',
+        mock_openai_client,
         constraints=['Test constraint 1', 'Test constraint 2'],
+        max_context=10000,
+        ai_model='no-need',
     )
 
     system_prompt = generator.generate_system_prompt()
@@ -39,7 +41,12 @@ def test_system_prompt_generation():
 
 def test_additional_context_handling(mock_openai_client):
     """Test handling of additional context in prompt generation"""
-    generator = DocAutoGenerator(base_url='http://localhost:11434')
+    generator = DocAutoGenerator(
+        mock_openai_client,
+        constraints=['Test constraint 1', 'Test constraint 2'],
+        max_context=10000,
+        ai_model='no-need',
+    )
     response = generator.generate('def test(): pass', context='Test context')
     assert isinstance(response, str)
     assert len(response) > 0

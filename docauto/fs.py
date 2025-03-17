@@ -79,3 +79,9 @@ class FileSystemService(BaseFileSystem):
                 yield path
             else:
                 self.logger.warning(f'Skipping non-Python file: {path}')
+
+    def is_valid_path(self, path: str) -> bool:
+        return Path(path).exists()
+
+    def is_valid_paths(self, paths: List[str]) -> bool:
+        return all(self.is_valid_path(path) for path in paths)

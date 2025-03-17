@@ -1,3 +1,5 @@
+import os
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,109 +15,129 @@ def test_cli_initialization(cli, logger):
 
 def test_parser_creation(cli):
     """Test argument parser creation and default arguments"""
-    args = cli.parse_args(['test.py'])
 
-    assert not args.ollama
-    assert not args.openai
-    assert not args.dry_run
-    assert not args.verbose
-    assert args.paths[0] == 'test.py'
-    assert args.api_key is None
-    assert args.base_url is None
-    assert args.ai_model is None
-    assert args.max_context is None
-    assert args.constraints is None
+    # the cli needs an existing file to work
+    with tempfile.NamedTemporaryFile(suffix='.py', delete=False) as temp_file:
+        temp_path = temp_file.name
 
+        args = cli.parse_args([temp_path])
 
-def test_preset_configuration(cli, config):
-    """Test preset configuration handling"""
-    args = dict(
-        ollama=True,
-        openai=False,
-        base_url=None,
-        api_key=None,
-        ai_model=None,
-        max_context=None,
-        paths=['test.py'],
-        dry_run=False,
-        verbose=False,
-        constraints=config['constraints'],
-    )
-
-    merged_config = cli._merge_configuration(args)
-    assert merged_config['base_url'] == config['base_url']
-    assert merged_config['ai_model'] == config['ai_model']
-    assert merged_config['api_key'] == config['api_key']
-    assert merged_config['max_context'] == config['max_context']
-
-    # Compare constraints as sets since order doesn't matter
-    assert set(merged_config['constraints']) == set(config['constraints'])
-
-
-def test_cli_argument_override(cli, config):
-    """Test CLI argument overriding preset values"""
-    custom_url = 'http://custom-url'
-    custom_model = 'custom-model'
-    custom_key = 'custom-key'
-    custom_context = 4096
-    custom_constraint = ['Custom constraint']
-
-    args = dict(
-        ollama=True,
-        openai=False,
-        base_url=custom_url,
-        api_key=custom_key,
-        ai_model=custom_model,
-        max_context=custom_context,
-        constraints=custom_constraint,
-        paths=['test.py'],
-        dry_run=False,
-        verbose=False,
-    )
-
-    merged_config = cli._merge_configuration(args)
-    assert merged_config['base_url'] == custom_url
-    assert merged_config['ai_model'] == custom_model
-    assert merged_config['api_key'] == custom_key
-    assert merged_config['max_context'] == custom_context
-    assert custom_constraint[0] in merged_config['constraints']
+        assert not args['ollama']
+        assert not args['openai']
+        assert not args['dry_run']
+        assert not args['verbose']
+        assert args['paths'][0] == temp_path
+        assert args['api_key'] is None
+        assert args['base_url'] is None
+        assert args['ai_model'] is None
+        assert args['max_context'] is None
+        assert args['constraints'] is None
+        # Clean up the temporary file
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
 
 
 def test_cli_validation(cli):
-    """Test configuration validation"""
-    # Test missing base URL
-    with pytest.raises(ValueError, match='Base URL is required'):
-        cli._merge_configuration(
-            dict(
-                ollama=False,
-                openai=False,
-                base_url=None,
-                api_key='key',
-                ai_model='model',
-                max_context=None,
-                constraints=None,
-                paths=['test.py'],
-                dry_run=False,
-                verbose=False,
-            )
+    """Test configuration validation with presets"""
+    # Test missing API key for OpenAI preset
+    with pytest.raises(ValueError, match='API key required'):
+        cli.resolve_config(
+            {
+                'openai': True,
+                'ollama': False,
+                'gemini': False,
+                'deepseek': False,
+                'base_url': 'https://api.openai.com/v1',
+                'api_key': None,  # Not provided
+                'ai_model': 'gpt-4',
+                'max_context': None,
+                'constraints': [],
+                'paths': ['test.py'],
+                'dry_run': False,
+                'verbose': False,
+                'overwrite': False,
+            }
         )
 
-    # Test missing API key for non-Ollama config
-    with pytest.raises(ValueError, match='API key required'):
-        cli._merge_configuration(
-            dict(
-                ollama=False,
-                openai=True,
-                base_url='http://test',
-                api_key=None,
-                ai_model='model',
-                max_context=None,
-                constraints=None,
-                paths=['test.py'],
-                dry_run=False,
-                verbose=False,
-            )
+    # Test invalid base URL format
+    with pytest.raises(ValueError, match='Invalid base URL'):
+        cli.resolve_config(
+            {
+                'ollama': True,
+                'base_url': 'invalid-url',
+                'api_key': 'ollama',
+                'ai_model': None,
+                'max_context': None,
+                'constraints': [],
+                'paths': ['test.py'],
+                'dry_run': False,
+                'verbose': False,
+                'overwrite': False,
+            }
         )
+
+
+def test_preset_configuration(cli, preset_manager):
+    """Test preset configuration handling"""
+    args = {
+        'ollama': True,
+        'openai': False,
+        'gemini': False,
+        'deepseek': False,
+        'base_url': None,
+        'api_key': None,
+        'ai_model': None,
+        'max_context': None,
+        'constraints': None,
+        'paths': ['test.py'],
+        'dry_run': False,
+        'verbose': False,
+        'overwrite': False,
+    }
+
+    ollama_preset = preset_manager.get_preset('ollama')
+    config = cli.resolve_config(args)
+
+    # Validate against expected preset values
+    assert config.api.base_url == ollama_preset.api.base_url
+    assert config.generation.ai_model == ollama_preset.generation.ai_model
+    assert config.api.api_key == ollama_preset.api.api_key
+    assert config.generation.max_context == ollama_preset.generation.max_context
+    assert set(config.generation.constraints) == set(
+        ollama_preset.generation.constraints
+    )
+
+
+def test_cli_argument_override(cli):
+    """Test CLI argument overriding preset values"""
+    custom_values = {
+        'base_url': 'http://custom-url',
+        'api_key': 'custom-key',
+        'ai_model': 'custom-model',
+        'max_context': 4096,
+        'constraints': ['Custom constraint'],
+    }
+
+    args = {
+        'ollama': True,
+        'openai': False,
+        'gemini': False,
+        'deepseek': False,
+        **custom_values,
+        'paths': ['test.py'],
+        'dry_run': False,
+        'verbose': False,
+        'overwrite': False,
+    }
+
+    config = cli.resolve_config(args)
+
+    # Verify CLI values override preset values
+    assert config.api.base_url == custom_values['base_url']
+    assert config.api.api_key == custom_values['api_key']
+    assert config.generation.ai_model == custom_values['ai_model']
+    assert config.generation.max_context == custom_values['max_context']
+    assert custom_values['constraints'][0] in config.generation.constraints
 
 
 def test_file_processing(cli, file_system, files_for_testing, config):

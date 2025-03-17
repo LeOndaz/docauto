@@ -4,7 +4,7 @@ version = "0.0.2"
 description = "A powerful Python documentation generator that swoops in to automatically create and maintain clean, comprehensive docstrings for your codebase"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 dependencies = [
     "libcst>=1.6.0",
     "openai>=1.64.0",
@@ -18,6 +18,7 @@ docauto = "docauto.cli:main"
 [dependency-groups]
 dev = [
     "isort>=6.0.1",
+    "mypy>=1.15.0",
     "pytest>=8.3.4",
     "ruff>=0.9.7",
     "setuptools>=75.8.2",

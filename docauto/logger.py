@@ -38,3 +38,13 @@ class SmartFormatter(logging.Formatter):
         self._style._fmt = original_format
 
         return result
+
+
+def _init_logger():
+    handler = logging.StreamHandler()
+    formatter = SmartFormatter(
+        default_format='[%(levelname)s] [%(asctime)s] [%(name)s]: %(message)s'
+    )
+    handler.setFormatter(formatter)
+    logger = logging.getLogger('docauto')
+    logger.addHandler(handler)

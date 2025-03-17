@@ -33,9 +33,14 @@ def test_empty_source(generator):
         generator.generate('')
 
 
-def test_max_context_limit():
+def test_max_context_limit(generator, mock_openai_client, logger):
     """Test handling of source code exceeding max context"""
-    generator = DocAutoGenerator(base_url='http://localhost:11434', max_context=10)
+    generator = DocAutoGenerator(
+        mock_openai_client,
+        logger=logger,
+        max_context=10,
+        ai_model='no-need',
+    )
     generator.min_response_context = 0
 
     with pytest.raises(ValueError, match='Prompt exceeds max_context limit.'):
@@ -53,17 +58,14 @@ def test_failed_llm_response(mock_openai_client, generator):
         generator.generate('def test(): pass')
 
 
-def test_invalid_api_key():
-    """Test initialization with invalid API key for non-local setup"""
-    with pytest.raises(ValueError, match='API key is required'):
-        DocAutoGenerator(base_url='https://api.openai.com/v1')
-
-
-def test_invalid_constraints():
+def test_invalid_constraints(mock_openai_client):
     """Test handling of invalid constraints type"""
     with pytest.raises(TypeError):
         DocAutoGenerator(
-            base_url='http://localhost:11434', constraints='invalid_constraints_type'
+            mock_openai_client,
+            max_context=10000,
+            ai_model='no-need',
+            constraints='invalid_constraints_type',  # noqa (the typehinting catches it)
         )
 
 

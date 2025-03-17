@@ -1,5 +1,6 @@
 import logging
 
+from docauto.presets import PresetManager
 from docauto.services import DocumentationService
 
 try:
@@ -15,14 +16,14 @@ import pytest
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 
-from docauto.config import APIConfig
+from docauto.cli import DocAutoCLI
+from docauto.config import APIConfig, DocAutoConfig, GenerationConfig
 from docauto.fs import FileSystemService
+from docauto.generator import DocAutoGenerator
 from docauto.logger import SmartFormatter
 from docauto.parsers import LLMDocstringResponseParser
 from docauto.tracker import ProgressTracker
 from docauto.transformers import DocTransformer
-from docauto.cli import DocAutoCLI
-from docauto.generator import DocAutoGenerator
 
 
 @pytest.fixture
@@ -96,9 +97,17 @@ def logger():
 
 
 @pytest.fixture
-def generator(config):
+def generator(mock_openai_client, logger, config):
     # use a better serialization way
-    return DocAutoGenerator(**config)
+    return DocAutoGenerator(
+        client=mock_openai_client,
+        logger=logger,
+        ai_model=config.generation.ai_model,
+        constraints=config.generation.constraints,
+        max_context=config.generation.max_context,
+        ignore_patterns=config.generation.ignore_patterns,
+        prompt_length_limit=config.generation.prompt_length_limit,
+    )
 
 
 @pytest.fixture
@@ -133,19 +142,26 @@ def files_for_testing():
 
 
 @pytest.fixture
-def config():
-    return APIConfig(
-        **{
-            'base_url': 'http://localhost:11434/v1',
-            'ai_model': 'phi4',
-            'api_key': 'ollama',
-            'max_context': 16384,
-            'constraints': [
+def config() -> DocAutoConfig:
+    return DocAutoConfig(
+        api=APIConfig(
+            base_url='http://localhost:11434/v1',
+            api_key='ollama',
+        ),
+        generation=GenerationConfig(
+            ai_model='phi4',
+            max_context=16384,
+            constraints=[
                 'Your respond will be taken as a docstring. Respond only with docstrings.',
                 'Keep it short, precise and use sphinx format.',
             ],
-        }
+        ),
     )
+
+
+@pytest.fixture
+def preset_manager():
+    return PresetManager()
 
 
 @pytest.fixture
